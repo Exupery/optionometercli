@@ -1,3 +1,10 @@
+.gradle
+.kotlin
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
 # Prerequisites
 *.d
 
@@ -32,4 +39,12 @@
 *.app
 
 .vs/
+.vscode/
 out/
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
