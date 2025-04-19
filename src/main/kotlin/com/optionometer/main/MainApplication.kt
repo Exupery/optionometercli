@@ -1,5 +1,7 @@
 package com.optionometer.main
 
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -7,14 +9,22 @@ import org.springframework.boot.runApplication
 private const val DEFAULT_TICKER = "QQQ"
 
 @SpringBootApplication
-class MainApplication : CommandLineRunner {
+class MainApplication(@Autowired val screener: Screener) : CommandLineRunner {
+
+  private val logger = LoggerFactory.getLogger(this::class.java)
+
   override fun run(vararg args: String?) {
     val ticker = if (args.isNotEmpty()) {
-      args[0]!!.uppercase()
+      val arg1 = args[0]
+      if (arg1.isNullOrBlank()) {
+        throw IllegalArgumentException("Ticker symbol cannot be blank")
+      }
+      arg1.uppercase()
     } else {
       DEFAULT_TICKER
     }
-    println("Optionometer started with ticker $ticker")
+    logger.info("Optionometer started with ticker $ticker")
+    screener.screen(ticker)
   }
 }
 
