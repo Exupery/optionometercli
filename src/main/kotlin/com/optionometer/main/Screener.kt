@@ -12,7 +12,7 @@ class Screener(
   @Value("\${screener.expiration.maxDays}") private val maxDays: Int
 ) {
 
-  private val logger = LoggerFactory.getLogger(this::class.java)
+  private val logger = LoggerFactory.getLogger(javaClass)
 
   fun screen(ticker: String) {
     logger.info("Screening option trades for $ticker between $minDays and $maxDays days to expiration")

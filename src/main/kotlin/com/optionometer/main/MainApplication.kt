@@ -11,7 +11,7 @@ private const val DEFAULT_TICKER = "QQQ"
 @SpringBootApplication
 class MainApplication(@Autowired val screener: Screener) : CommandLineRunner {
 
-  private val logger = LoggerFactory.getLogger(this::class.java)
+  private val logger = LoggerFactory.getLogger(javaClass)
 
   override fun run(vararg args: String?) {
     val ticker = if (args.isNotEmpty()) {
