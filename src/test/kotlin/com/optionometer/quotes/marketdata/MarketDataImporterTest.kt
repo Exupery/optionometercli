@@ -4,14 +4,17 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.MissingKotlinParameterException
 import com.optionometer.main.AppConfiguration
+import com.optionometer.models.Side
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 @SpringBootTest(classes = [AppConfiguration::class])
@@ -63,10 +66,7 @@ class MarketDataImporterTest(
 
   @Test
   fun `verify DTE params are set`() {
-    val response = MockResponse()
-      .setBody(optionChainResponseJson)
-      .setResponseCode(200)
-    mockWebServer.enqueue(response)
+    enqueueOptionChainResponse()
 
     importer.fetchOptionChains(ticker, 0, 30)
     val request = mockWebServer.takeRequest()
@@ -78,16 +78,55 @@ class MarketDataImporterTest(
 
   @Test
   fun `verify strike limit param is set`() {
-    val response = MockResponse()
-      .setBody(optionChainResponseJson)
-      .setResponseCode(200)
-    mockWebServer.enqueue(response)
+    enqueueOptionChainResponse()
 
     importer.fetchOptionChains(ticker, 0, 30)
     val request = mockWebServer.takeRequest()
     assertNotNull(request.path)
     val path = request.path!!
     assertTrue(path.contains("strikeLimit=10"))
+  }
+
+  @Test
+  fun `verify option chains are grouped by expiry`() {
+    enqueueOptionChainResponse()
+
+    val optionChains = importer.fetchOptionChains(ticker, 0, 30)
+    // Test is meaningless if test response has fewer than two chains
+    assertTrue(optionChains.size >= 2)
+    val expirations = optionChains.map { it.expiry }
+    assertEquals(optionChains.size, expirations.size)
+  }
+
+  @Test
+  fun `verify options are associated with correct side`() {
+    enqueueOptionChainResponse()
+
+    val optionChains = importer.fetchOptionChains(ticker, 0, 30)
+    assertFalse(optionChains.isEmpty())
+    optionChains.forEach { optionChain ->
+      assertTrue(optionChain.calls.all { it.side == Side.CALL })
+      assertTrue(optionChain.puts.all { it.side == Side.PUT })
+    }
+  }
+
+  @Test
+  fun `verify options are put in correct option chain`() {
+    enqueueOptionChainResponse()
+
+    val optionChains = importer.fetchOptionChains(ticker, 0, 30)
+    assertFalse(optionChains.isEmpty())
+    optionChains.forEach { optionChain ->
+      val options = optionChain.calls + optionChain.puts
+      assertTrue(options.all { it.expiry == optionChain.expiry.epochSecond })
+    }
+  }
+
+  private fun enqueueOptionChainResponse() {
+    val response = MockResponse()
+      .setBody(optionChainResponseJson)
+      .setResponseCode(200)
+    mockWebServer.enqueue(response)
   }
 
 }

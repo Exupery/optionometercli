@@ -41,7 +41,7 @@ class MarketDataImporter(
     val from = dteToTime(minDaysToExpiration)
     val to = dteToTime(maxDaysToExpiration)
     val url = "$rootEndpoint$OPTION_CHAIN_PATH/$ticker/?from=$from&to=$to&strikeLimit=$maxStrikes"
-    logger.info("GET $url")
+    logger.info("Making GET call to $url for $ticker")
     val request = Request.Builder()
       .url(url)
       .header("Authorization", "Bearer $apiToken")
@@ -55,7 +55,18 @@ class MarketDataImporter(
       logger.error("$responseCode ${response.body?.string()}")
       return emptyList()
     }
+
     val optionChainResponse = mapper.readValue(response.body?.string(), OptionChainResponse::class.java)
+
+    val numFound = optionChainResponse.underlyingPrice.size
+    val nearest = Instant.ofEpochSecond(optionChainResponse.expiration.min())
+    val farthest = Instant.ofEpochSecond(optionChainResponse.expiration.max())
+    val minStrike = optionChainResponse.strike.min()
+    val maxStrike = optionChainResponse.strike.max()
+    logger.info(
+      "Found $numFound options between strikes $minStrike and $maxStrike " +
+          "expiring between $nearest and $farthest"
+    )
 
     return convertToChains(ticker, optionChainResponse)
   }
@@ -89,8 +100,8 @@ class MarketDataImporter(
     val byExpiry = options.groupBy { it.expiry }
     return byExpiry.map { (expiry, bar) ->
       val bySide = bar.groupBy { it.side }
-      val calls = bySide[Side.CALL] ?: emptyList()
-      val puts = bySide[Side.PUT] ?: emptyList()
+      val calls = bySide[Side.CALL]?.sortedBy { it.strike } ?: emptyList()
+      val puts = bySide[Side.PUT]?.sortedBy { it.strike } ?: emptyList()
       val expires = Instant.ofEpochSecond(expiry)
       OptionChain(ticker, underlyingPrice, expires, calls, puts)
     }.sortedBy { it.expiry }
