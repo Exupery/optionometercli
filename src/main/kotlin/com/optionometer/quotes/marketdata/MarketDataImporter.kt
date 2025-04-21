@@ -1,6 +1,9 @@
 package com.optionometer.quotes.marketdata
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.optionometer.models.Option
+import com.optionometer.models.OptionChain
+import com.optionometer.models.Side
 import com.optionometer.quotes.Importer
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -34,7 +37,7 @@ class MarketDataImporter(
     ticker: String,
     minDaysToExpiration: Int,
     maxDaysToExpiration: Int
-  ) {
+  ): List<OptionChain> {
     val from = dteToTime(minDaysToExpiration)
     val to = dteToTime(maxDaysToExpiration)
     val url = "$rootEndpoint$OPTION_CHAIN_PATH/$ticker/?from=$from&to=$to&strikeLimit=$maxStrikes"
@@ -50,16 +53,46 @@ class MarketDataImporter(
     val responseCode = response.code
     if (responseCode >= 400) {
       logger.error("$responseCode ${response.body?.string()}")
-      return
+      return emptyList()
     }
     val optionChainResponse = mapper.readValue(response.body?.string(), OptionChainResponse::class.java)
+
+    return convertToChains(ticker, optionChainResponse)
   }
 
   private fun dteToTime(dte: Int): Long {
     return Instant.now().plus(dte.toLong(), ChronoUnit.DAYS).epochSecond
   }
 
-  private fun convert(optionChainResponse: OptionChainResponse) {
+  private fun convertToChains(
+    ticker: String,
+    optionChainResponse: OptionChainResponse
+  ): List<OptionChain> {
+    val options = optionChainResponse.strike.mapIndexed { idx, _ ->
+      Option(
+        optionChainResponse.optionSymbol[idx],
+        optionChainResponse.strike[idx],
+        Side.valueOf(optionChainResponse.side[idx].uppercase()),
+        optionChainResponse.expiration[idx],
+        optionChainResponse.dte[idx],
+        optionChainResponse.bid[idx],
+        optionChainResponse.ask[idx],
+        optionChainResponse.iv[idx],
+        optionChainResponse.delta[idx],
+        optionChainResponse.gamma[idx],
+        optionChainResponse.theta[idx],
+        optionChainResponse.vega[idx]
+      )
+    }
 
+    val underlyingPrice = optionChainResponse.underlyingPrice.firstOrNull() ?: return emptyList()
+    val byExpiry = options.groupBy { it.expiry }
+    return byExpiry.map { (expiry, bar) ->
+      val bySide = bar.groupBy { it.side }
+      val calls = bySide[Side.CALL] ?: emptyList()
+      val puts = bySide[Side.PUT] ?: emptyList()
+      val expires = Instant.ofEpochSecond(expiry)
+      OptionChain(ticker, underlyingPrice, expires, calls, puts)
+    }.sortedBy { it.expiry }
   }
 }

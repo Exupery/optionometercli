@@ -56,7 +56,8 @@ class MarketDataImporterTest(
       .setResponseCode(400)
     mockWebServer.enqueue(response)
     assertDoesNotThrow {
-      importer.fetchOptionChains(ticker, 0, 30)
+      val chains = importer.fetchOptionChains(ticker, 0, 30)
+      assertTrue(chains.isEmpty())
     }
   }
 
