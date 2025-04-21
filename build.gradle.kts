@@ -1,3 +1,6 @@
+val jacksonVersion = "2.18.3"
+val okhttpVersion = "4.12.0"
+
 plugins {
   kotlin("jvm") version "1.9.25"
   kotlin("plugin.spring") version "1.9.25"
@@ -21,7 +24,12 @@ repositories {
 dependencies {
   implementation("org.springframework.boot:spring-boot-starter")
   implementation("org.jetbrains.kotlin:kotlin-reflect")
-  implementation("com.squareup.okhttp3:okhttp:4.12.0")
+  implementation("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
+  implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
+  implementation("com.squareup.okhttp3:okhttp:$okhttpVersion")
+  testImplementation("com.squareup.okhttp3:mockwebserver:$okhttpVersion")
+  testImplementation("io.mockk:mockk:1.14.0")
   testImplementation("org.springframework.boot:spring-boot-starter-test")
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")

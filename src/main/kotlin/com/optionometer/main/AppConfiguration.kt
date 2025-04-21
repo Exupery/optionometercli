@@ -1,7 +1,11 @@
 package com.optionometer.main
 
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.optionometer.quotes.Importer
 import com.optionometer.quotes.marketdata.MarketDataImporter
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -9,8 +13,18 @@ import org.springframework.context.annotation.Configuration
 class AppConfiguration {
 
   @Bean
-  fun importer(): Importer {
-    return MarketDataImporter()
+  fun objectMapper(): ObjectMapper {
+    return ObjectMapper()
+      .registerModule(KotlinModule.Builder().build())
+      .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+  }
+
+  @Bean
+  fun importer(
+    @Value("\${marketdata.rootEndpoint}") rootEndpoint: String,
+    objectMapper: ObjectMapper
+  ): Importer {
+    return MarketDataImporter(rootEndpoint, objectMapper)
   }
 
 }
