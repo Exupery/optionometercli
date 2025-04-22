@@ -2,7 +2,7 @@ package com.optionometer.models
 
 data class Option(
   val symbol: String,
-  val strike: Int,
+  val strike: Double,
   val side: Side,
   val expiry: Long,
   val dte: Int,

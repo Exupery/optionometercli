@@ -1,5 +1,6 @@
 package com.optionometer.main
 
+import com.optionometer.screener.Screener
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.CommandLineRunner

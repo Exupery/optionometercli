@@ -5,7 +5,7 @@ data class OptionChainResponse(
   val optionSymbol: List<String>,
   val expiration: List<Long>,
   val side: List<String>,
-  val strike: List<Int>,
+  val strike: List<Double>,
   val dte: List<Int>,
   val bid: List<Double>,
   val ask: List<Double>,
