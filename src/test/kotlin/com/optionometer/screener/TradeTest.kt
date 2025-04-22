@@ -8,7 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 
@@ -18,7 +18,7 @@ class TradeTest {
   private val underlying = "DIS"
 
   @Test
-  fun `verify no options has zero profit`() {
+  fun `verify no options in trade returns zero profit`() {
     val trade = Trade(
       underlying,
       100.00,
@@ -33,107 +33,217 @@ class TradeTest {
   @ParameterizedTest
   @MethodSource("longCalls")
   fun `verify long call profit`(
-    strike: Double,
-    bid: Double,
-    ask: Double,
+    longCall: Option,
     target: Double,
     expected: Double
   ) {
-    val longCall = call(strike, bid, ask)
     val trade = Trade(underlying, 0.0, listOf(longCall), emptyList())
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
 
+  @SuppressWarnings
   private fun longCalls(): Stream<Arguments> {
+    val longCall = call(10.0, 1.5, 1.6)
     return Stream.of(
-      Arguments.of(10.0, 1.5, 1.6, 8.0, -1.6),
-      Arguments.of(10.0, 1.5, 1.6, 9.0, -1.6),
-      Arguments.of(10.0, 1.5, 1.6, 10.0, -1.6),
-      Arguments.of(10.0, 1.5, 1.6, 11.0, -0.6),
-      Arguments.of(10.0, 1.5, 1.6, 12.0, 0.4),
-      Arguments.of(10.0, 1.5, 1.6, 13.0, 1.4)
+      Arguments.of(longCall, 8.0, -1.6),
+      Arguments.of(longCall, 9.0, -1.6),
+      Arguments.of(longCall, 10.0, -1.6),
+      Arguments.of(longCall, 11.0, -0.6),
+      Arguments.of(longCall, 12.0, 0.4),
+      Arguments.of(longCall, 13.0, 1.4)
     )
   }
 
   @ParameterizedTest
   @MethodSource("longPuts")
   fun `verify long put profit`(
-    strike: Double,
-    bid: Double,
-    ask: Double,
+    longPut: Option,
     target: Double,
     expected: Double
   ) {
-    val longPut = put(strike, bid, ask)
     val trade = Trade(underlying, 0.0, listOf(longPut), emptyList())
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
 
+  @SuppressWarnings
   private fun longPuts(): Stream<Arguments> {
+    val longPut = put(10.0, 1.5, 1.6)
     return Stream.of(
-      Arguments.of(10.0, 1.5, 1.6, 7.0, 1.4),
-      Arguments.of(10.0, 1.5, 1.6, 8.0, 0.4),
-      Arguments.of(10.0, 1.5, 1.6, 9.0, -0.6),
-      Arguments.of(10.0, 1.5, 1.6, 10.0, -1.6),
-      Arguments.of(10.0, 1.5, 1.6, 11.0, -1.6),
-      Arguments.of(10.0, 1.5, 1.6, 12.0, -1.6)
+      Arguments.of(longPut, 7.0, 1.4),
+      Arguments.of(longPut, 8.0, 0.4),
+      Arguments.of(longPut, 9.0, -0.6),
+      Arguments.of(longPut, 10.0, -1.6),
+      Arguments.of(longPut, 11.0, -1.6),
+      Arguments.of(longPut, 12.0, -1.6)
     )
   }
 
   @ParameterizedTest
   @MethodSource("shortCalls")
   fun `verify short call profit`(
-    strike: Double,
-    bid: Double,
-    ask: Double,
+    shortCall: Option,
     target: Double,
     expected: Double
   ) {
-    val shortCall = call(strike, bid, ask)
     val trade = Trade(underlying, 0.0, emptyList(), listOf(shortCall))
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
 
+  @SuppressWarnings
   private fun shortCalls(): Stream<Arguments> {
+    val shortCall = call(10.0, 1.5, 1.6)
     return Stream.of(
-      Arguments.of(10.0, 1.5, 1.6, 8.0, 1.5),
-      Arguments.of(10.0, 1.5, 1.6, 9.0, 1.5),
-      Arguments.of(10.0, 1.5, 1.6, 10.0, 1.5),
-      Arguments.of(10.0, 1.5, 1.6, 11.0, 0.5),
-      Arguments.of(10.0, 1.5, 1.6, 12.0, -0.5),
-      Arguments.of(10.0, 1.5, 1.6, 13.0, -1.5),
-      Arguments.of(10.0, 1.5, 1.6, 14.0, -2.5)
+      Arguments.of(shortCall, 8.0, 1.5),
+      Arguments.of(shortCall, 9.0, 1.5),
+      Arguments.of(shortCall, 10.0, 1.5),
+      Arguments.of(shortCall, 11.0, 0.5),
+      Arguments.of(shortCall, 12.0, -0.5),
+      Arguments.of(shortCall, 13.0, -1.5),
+      Arguments.of(shortCall, 14.0, -2.5)
     )
   }
 
   @ParameterizedTest
   @MethodSource("shortPuts")
   fun `verify short put profit`(
-    strike: Double,
-    bid: Double,
-    ask: Double,
+    shortPut: Option,
     target: Double,
     expected: Double
   ) {
-    val shortPut = put(strike, bid, ask)
     val trade = Trade(underlying, 0.0, emptyList(), listOf(shortPut))
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
 
+  @SuppressWarnings
   private fun shortPuts(): Stream<Arguments> {
+    val shortPut = put(10.0, 1.5, 1.6)
     return Stream.of(
-      Arguments.of(10.0, 1.5, 1.6, 6.0, -2.5),
-      Arguments.of(10.0, 1.5, 1.6, 7.0, -1.5),
-      Arguments.of(10.0, 1.5, 1.6, 8.0, -0.5),
-      Arguments.of(10.0, 1.5, 1.6, 9.0, 0.5),
-      Arguments.of(10.0, 1.5, 1.6, 10.0, 1.5),
-      Arguments.of(10.0, 1.5, 1.6, 11.0, 1.5),
-      Arguments.of(10.0, 1.5, 1.6, 12.0, 1.5),
-      Arguments.of(10.0, 1.5, 1.6, 13.0, 1.5)
+      Arguments.of(shortPut, 6.0, -2.5),
+      Arguments.of(shortPut, 7.0, -1.5),
+      Arguments.of(shortPut, 8.0, -0.5),
+      Arguments.of(shortPut, 9.0, 0.5),
+      Arguments.of(shortPut, 10.0, 1.5),
+      Arguments.of(shortPut, 11.0, 1.5),
+      Arguments.of(shortPut, 12.0, 1.5)
+    )
+  }
+
+  @ParameterizedTest
+  @MethodSource("longCallSpreads")
+  fun `verify long call spread profit`(
+    longCall: Option,
+    shortCall: Option,
+    target: Double,
+    expected: Double
+  ) {
+    val trade = Trade(underlying, 0.0, listOf(longCall), listOf(shortCall))
+    val actual = trade.profitLossAtPrice(target)
+    assertEquals(expected, actual, 0.01)
+  }
+
+  @SuppressWarnings
+  private fun longCallSpreads(): Stream<Arguments> {
+    val longCall = call(10.0, 1.5, 1.6)
+    val shortCall = call(12.0, 1.1, 1.2)
+    return Stream.of(
+      Arguments.of(longCall, shortCall, 8.0, -0.5),
+      Arguments.of(longCall, shortCall, 9.0, -0.5),
+      Arguments.of(longCall, shortCall, 10.0, -0.5),
+      Arguments.of(longCall, shortCall, 10.5, 0.0),
+      Arguments.of(longCall, shortCall, 11.0, 0.5),
+      Arguments.of(longCall, shortCall, 12.0, 1.5),
+      Arguments.of(longCall, shortCall, 13.0, 1.5),
+      Arguments.of(longCall, shortCall, 14.0, 1.5)
+    )
+  }
+
+  @ParameterizedTest
+  @MethodSource("longPutSpreads")
+  fun `verify long put spread profit`(
+    shortPut: Option,
+    longPut: Option,
+    target: Double,
+    expected: Double
+  ) {
+    val trade = Trade(underlying, 0.0, listOf(longPut), listOf(shortPut))
+    val actual = trade.profitLossAtPrice(target)
+    assertEquals(expected, actual, 0.01)
+  }
+
+  @SuppressWarnings
+  private fun longPutSpreads(): Stream<Arguments> {
+    val shortPut = put(10.0, 1.1, 1.2)
+    val longPut = put(12.0, 1.5, 1.6)
+    return Stream.of(
+      Arguments.of(shortPut, longPut, 8.0, 1.5),
+      Arguments.of(shortPut, longPut, 9.0, 1.5),
+      Arguments.of(shortPut, longPut, 10.0, 1.5),
+      Arguments.of(shortPut, longPut, 11.0, 0.5),
+      Arguments.of(shortPut, longPut, 11.5, 0.0),
+      Arguments.of(shortPut, longPut, 12.0, -0.5),
+      Arguments.of(shortPut, longPut, 13.0, -0.5),
+      Arguments.of(shortPut, longPut, 14.0, -0.5)
+    )
+  }
+
+  @ParameterizedTest
+  @MethodSource("shortCallSpreads")
+  fun `verify short call spread profit`(
+    shortCall: Option,
+    longCall: Option,
+    target: Double,
+    expected: Double
+  ) {
+    val trade = Trade(underlying, 0.0, listOf(longCall), listOf(shortCall))
+    val actual = trade.profitLossAtPrice(target)
+    assertEquals(expected, actual, 0.01)
+  }
+
+  @SuppressWarnings
+  private fun shortCallSpreads(): Stream<Arguments> {
+    val shortCall = call(10.0, 1.5, 1.6)
+    val longCall = call(12.0, 1.1, 1.2)
+    return Stream.of(
+      Arguments.of(shortCall, longCall, 8.0, 0.3),
+      Arguments.of(shortCall, longCall, 9.0, 0.3),
+      Arguments.of(shortCall, longCall, 10.0, 0.3),
+      Arguments.of(shortCall, longCall, 10.3, 0.0),
+      Arguments.of(shortCall, longCall, 11.0, -0.7),
+      Arguments.of(shortCall, longCall, 12.0, -1.7),
+      Arguments.of(shortCall, longCall, 13.0, -1.7)
+    )
+  }
+
+  @ParameterizedTest
+  @MethodSource("shortPutSpreads")
+  fun `verify short put spread profit`(
+    longPut: Option,
+    shortPut: Option,
+    target: Double,
+    expected: Double
+  ) {
+    val trade = Trade(underlying, 0.0, listOf(longPut), listOf(shortPut))
+    val actual = trade.profitLossAtPrice(target)
+    assertEquals(expected, actual, 0.01)
+  }
+
+  @SuppressWarnings
+  private fun shortPutSpreads(): Stream<Arguments> {
+    val longPut = put(10.0, 1.1, 1.2)
+    val shortPut = put(12.0, 1.5, 1.6)
+    return Stream.of(
+      Arguments.of(longPut, shortPut, 8.0, -1.7),
+      Arguments.of(longPut, shortPut, 9.0, -1.7),
+      Arguments.of(longPut, shortPut, 10.0, -1.7),
+      Arguments.of(longPut, shortPut, 11.0, -0.7),
+      Arguments.of(longPut, shortPut, 11.7, 0.0),
+      Arguments.of(longPut, shortPut, 12.0, 0.3),
+      Arguments.of(longPut, shortPut, 13.0, 0.3),
+      Arguments.of(longPut, shortPut, 14.0, 0.3)
     )
   }
 
