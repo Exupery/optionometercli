@@ -8,8 +8,8 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.time.Instant
-import java.util.UUID
 import java.util.stream.Stream
+import kotlin.math.abs
 import kotlin.test.assertEquals
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -29,6 +29,10 @@ class TradeTest {
     val profit = trade.profitLossAtPrice(200.00)
     assertEquals(0.00, profit, 0.01)
   }
+
+  /* *********************
+   * SINGLE LEG STRATEGIES
+   ********************* */
 
   @ParameterizedTest
   @MethodSource("longCalls")
@@ -131,6 +135,10 @@ class TradeTest {
       Arguments.of(shortPut, 12.0, 1.5)
     )
   }
+
+  /* *********************
+   * TWO LEG STRATEGIES
+   ********************* */
 
   @ParameterizedTest
   @MethodSource("longCallSpreads")
@@ -247,6 +255,114 @@ class TradeTest {
     )
   }
 
+  @ParameterizedTest
+  @MethodSource("longStraddles")
+  fun `verify long straddle profit`(
+    longPut: Option,
+    longCall: Option,
+    target: Double,
+    expected: Double
+  ) {
+    val trade = Trade(underlying, 0.0, listOf(longPut, longCall), emptyList())
+    val actual = trade.profitLossAtPrice(target)
+    assertEquals(expected, actual, 0.01)
+  }
+
+  @SuppressWarnings
+  private fun longStraddles(): List<Arguments> {
+    val strike = 11.0
+    val longPut = put(strike, 1.3, 1.4)
+    val longCall = call(strike, 1.5, 1.6)
+    return (5..17).map { target ->
+      val expected = abs(strike - target) - (longPut.ask + longCall.ask)
+      Arguments.of(longPut, longCall, target, expected)
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("shortStraddles")
+  fun `verify short straddle profit`(
+    shortPut: Option,
+    shortCall: Option,
+    target: Double,
+    expected: Double
+  ) {
+    val trade = Trade(underlying, 0.0, emptyList(), listOf(shortPut, shortCall))
+    val actual = trade.profitLossAtPrice(target)
+    assertEquals(expected, actual, 0.01)
+  }
+
+  @SuppressWarnings
+  private fun shortStraddles(): List<Arguments> {
+    val strike = 11.0
+    val shortPut = put(strike, 1.3, 1.4)
+    val shortCall = call(strike, 1.5, 1.6)
+    return (5..17).map { target ->
+      val expected = (abs(strike - target) * -1) + (shortPut.bid + shortCall.bid)
+      Arguments.of(shortPut, shortCall, target, expected)
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("longStrangles")
+  fun `verify long strangle profit`(
+    longPut: Option,
+    longCall: Option,
+    target: Double,
+    expected: Double
+  ) {
+    val trade = Trade(underlying, 0.0, listOf(longPut, longCall), emptyList())
+    val actual = trade.profitLossAtPrice(target)
+    assertEquals(expected, actual, 0.01)
+  }
+
+  @SuppressWarnings
+  private fun longStrangles(): List<Arguments> {
+    val longPut = put(10.0, 1.3, 1.4)
+    val longCall = call(12.0, 1.5, 1.6)
+    return (4..18).map { target ->
+      val cost = longPut.ask + longCall.ask
+      val expected = if (target < longPut.strike) {
+        longPut.strike - target - cost
+      } else if (target > longCall.strike) {
+        target - longCall.strike - cost
+      } else {
+        cost * -1
+      }
+      Arguments.of(longPut, longCall, target, expected)
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("shortStrangles")
+  fun `verify short strangle profit`(
+    shortPut: Option,
+    shortCall: Option,
+    target: Double,
+    expected: Double
+  ) {
+    val trade = Trade(underlying, 0.0, emptyList(), listOf(shortPut, shortCall))
+    val actual = trade.profitLossAtPrice(target)
+    assertEquals(expected, actual, 0.01)
+  }
+
+  @SuppressWarnings
+  private fun shortStrangles(): List<Arguments> {
+    val shortPut = put(10.0, 1.3, 1.4)
+    val shortCall = call(12.0, 1.5, 1.6)
+    return (4..18).map { target ->
+      val credit = shortPut.bid + shortCall.bid
+      val expected = if (target < shortPut.strike) {
+        target - shortPut.strike + credit
+      } else if (target > shortCall.strike) {
+        shortCall.strike - target + credit
+      } else {
+        credit
+      }
+      Arguments.of(shortPut, shortCall, target, expected)
+    }
+  }
+
   private fun call(strike: Double, bid: Double, ask: Double): Option {
     return option(
       strike,
@@ -272,7 +388,7 @@ class TradeTest {
     side: Side
   ): Option {
     return Option(
-      UUID.randomUUID().toString(),
+      "${side.name[0]}-$strike",
       strike,
       side,
       Instant.now().epochSecond,
