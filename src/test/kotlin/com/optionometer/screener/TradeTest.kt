@@ -20,8 +20,6 @@ class TradeTest {
   @Test
   fun `verify no options in trade returns zero profit`() {
     val trade = Trade(
-      underlying,
-      100.00,
       emptyList(),
       emptyList()
     )
@@ -41,7 +39,7 @@ class TradeTest {
     target: Double,
     expected: Double
   ) {
-    val trade = Trade(underlying, 0.0, listOf(longCall), emptyList())
+    val trade = Trade(listOf(longCall), emptyList())
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
@@ -66,7 +64,7 @@ class TradeTest {
     target: Double,
     expected: Double
   ) {
-    val trade = Trade(underlying, 0.0, listOf(longPut), emptyList())
+    val trade = Trade(listOf(longPut), emptyList())
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
@@ -91,7 +89,7 @@ class TradeTest {
     target: Double,
     expected: Double
   ) {
-    val trade = Trade(underlying, 0.0, emptyList(), listOf(shortCall))
+    val trade = Trade(emptyList(), listOf(shortCall))
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
@@ -117,7 +115,7 @@ class TradeTest {
     target: Double,
     expected: Double
   ) {
-    val trade = Trade(underlying, 0.0, emptyList(), listOf(shortPut))
+    val trade = Trade(emptyList(), listOf(shortPut))
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
@@ -148,7 +146,7 @@ class TradeTest {
     target: Double,
     expected: Double
   ) {
-    val trade = Trade(underlying, 0.0, listOf(longCall), listOf(shortCall))
+    val trade = Trade(listOf(longCall), listOf(shortCall))
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
@@ -177,7 +175,7 @@ class TradeTest {
     target: Double,
     expected: Double
   ) {
-    val trade = Trade(underlying, 0.0, listOf(longPut), listOf(shortPut))
+    val trade = Trade(listOf(longPut), listOf(shortPut))
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
@@ -206,7 +204,7 @@ class TradeTest {
     target: Double,
     expected: Double
   ) {
-    val trade = Trade(underlying, 0.0, listOf(longCall), listOf(shortCall))
+    val trade = Trade(listOf(longCall), listOf(shortCall))
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
@@ -234,7 +232,7 @@ class TradeTest {
     target: Double,
     expected: Double
   ) {
-    val trade = Trade(underlying, 0.0, listOf(longPut), listOf(shortPut))
+    val trade = Trade(listOf(longPut), listOf(shortPut))
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
@@ -263,7 +261,7 @@ class TradeTest {
     target: Double,
     expected: Double
   ) {
-    val trade = Trade(underlying, 0.0, listOf(longPut, longCall), emptyList())
+    val trade = Trade(listOf(longPut, longCall), emptyList())
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
@@ -287,7 +285,7 @@ class TradeTest {
     target: Double,
     expected: Double
   ) {
-    val trade = Trade(underlying, 0.0, emptyList(), listOf(shortPut, shortCall))
+    val trade = Trade(emptyList(), listOf(shortPut, shortCall))
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
@@ -311,7 +309,7 @@ class TradeTest {
     target: Double,
     expected: Double
   ) {
-    val trade = Trade(underlying, 0.0, listOf(longPut, longCall), emptyList())
+    val trade = Trade(listOf(longPut, longCall), emptyList())
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }
@@ -341,7 +339,7 @@ class TradeTest {
     target: Double,
     expected: Double
   ) {
-    val trade = Trade(underlying, 0.0, emptyList(), listOf(shortPut, shortCall))
+    val trade = Trade(emptyList(), listOf(shortPut, shortCall))
     val actual = trade.profitLossAtPrice(target)
     assertEquals(expected, actual, 0.01)
   }

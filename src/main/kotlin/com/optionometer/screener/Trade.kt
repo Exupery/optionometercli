@@ -4,8 +4,6 @@ import com.optionometer.models.Option
 import com.optionometer.models.Side
 
 class Trade(
-  val underlying: String,
-  val underlyingPrice: Double,
   val buys: List<Option>,
   val sells: List<Option>
 ) {
@@ -59,7 +57,7 @@ class Trade(
   override fun toString(): String {
     val buySymbols = buys.map { it.symbol }.joinToString { "," }
     val sellSymbols = sells.map { it.symbol }.joinToString { "," }
-    return "[$underlying] - BUY to open [$buySymbols], SELL to open [$sellSymbols]"
+    return "BUY to open [$buySymbols], SELL to open [$sellSymbols]"
   }
 
 }
