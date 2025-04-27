@@ -55,9 +55,9 @@ class Trade(
   }
 
   override fun toString(): String {
-    val buySymbols = buys.map { it.symbol }.joinToString { "," }
-    val sellSymbols = sells.map { it.symbol }.joinToString { "," }
-    return "BUY to open [$buySymbols], SELL to open [$sellSymbols]"
+    val buySymbols = buys.map { it.symbol }
+    val sellSymbols = sells.map { it.symbol }
+    return "BUY to open $buySymbols, SELL to open $sellSymbols"
   }
 
 }

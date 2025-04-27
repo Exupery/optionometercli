@@ -17,10 +17,10 @@ class Screener(
   fun screen(ticker: String) {
     logger.info("Screening option trades for $ticker between $minDays and $maxDays days to expiration")
     val optionChains = importer.fetchOptionChains(ticker, minDays, maxDays)
-    val bestByExpiry = optionChains.map { findBestForChain(it) }
+    val tradesByExpiry = optionChains.map { findPotentialTradesByChain(it) }
   }
 
-  private fun findBestForChain(optionChain: OptionChain) {
+  private fun findPotentialTradesByChain(optionChain: OptionChain) {
 
   }
 
