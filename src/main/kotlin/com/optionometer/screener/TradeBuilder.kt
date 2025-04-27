@@ -16,15 +16,15 @@ class TradeBuilder(
 
   private val fourLegTrades = buildFourLegTrades()
 
-  fun getSpreads(): List<Trade> {
+  fun spreads(): List<Trade> {
     return spreads
   }
 
-  fun getThreeLegTrades(): List<Trade> {
+  fun threeLegTrades(): List<Trade> {
     return threeLegTrades
   }
 
-  fun getFourLegTrades(): List<Trade> {
+  fun fourLegTrades(): List<Trade> {
     return fourLegTrades
   }
 

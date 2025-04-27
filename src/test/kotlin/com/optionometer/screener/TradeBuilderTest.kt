@@ -24,16 +24,16 @@ class TradeBuilderTest {
     val emptyChain = OptionChain("", 0.0, Instant.now(), emptyList(), emptyList())
     val builder = TradeBuilder(emptyChain)
 
-    assertTrue(builder.getSpreads().isEmpty())
-    assertTrue(builder.getThreeLegTrades().isEmpty())
-    assertTrue(builder.getFourLegTrades().isEmpty())
+    assertTrue(builder.spreads().isEmpty())
+    assertTrue(builder.threeLegTrades().isEmpty())
+    assertTrue(builder.fourLegTrades().isEmpty())
   }
 
   @Test
   fun `verify spreads are built correctly`() {
     val builder = TradeBuilder(optionChain)
 
-    val spreads = builder.getSpreads()
+    val spreads = builder.spreads()
     assertFalse(spreads.isEmpty())
     spreads.forEach { spread ->
       val buys = spread.buys
@@ -48,7 +48,7 @@ class TradeBuilderTest {
   fun `verify three leg trades are built correctly`() {
     val builder = TradeBuilder(optionChain)
 
-    val trades = builder.getThreeLegTrades()
+    val trades = builder.threeLegTrades()
     assertFalse(trades.isEmpty())
     trades.forEach { trade ->
       val buys = trade.buys
@@ -66,7 +66,7 @@ class TradeBuilderTest {
   fun `verify four leg trades are built correctly`() {
     val builder = TradeBuilder(optionChain)
 
-    val trades = builder.getFourLegTrades()
+    val trades = builder.fourLegTrades()
     assertFalse(trades.isEmpty())
     trades.forEach { trade ->
       val buys = trade.buys
