@@ -2,7 +2,7 @@ package com.optionometer.quotes.marketdata
 
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.MissingKotlinParameterException
+import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import com.optionometer.main.AppConfiguration
 import com.optionometer.models.Side
 import okhttp3.mockwebserver.MockResponse
@@ -26,7 +26,7 @@ class MarketDataImporterTest(
 
   private val mockWebServer = MockWebServer()
   private val optionChainResponseJson =
-    String(ClassLoader.getSystemResourceAsStream("optionchaintestresponse.json").readAllBytes())
+    String(ClassLoader.getSystemResourceAsStream("optionchaintestresponse.json")!!.readAllBytes())
 
   private val importer = MarketDataImporter(mockWebServer.url("").toString(), mapper)
 
@@ -47,7 +47,7 @@ class MarketDataImporterTest(
       .setBody("""{"s":"ok"}""")
       .setResponseCode(200)
     mockWebServer.enqueue(response)
-    assertThrows<MissingKotlinParameterException> {
+    assertThrows<MismatchedInputException> {
       importer.fetchOptionChains(ticker, 0, 30)
     }
   }
