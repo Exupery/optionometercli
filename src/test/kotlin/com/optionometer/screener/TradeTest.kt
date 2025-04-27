@@ -1,21 +1,19 @@
 package com.optionometer.screener
 
 import com.optionometer.models.Option
-import com.optionometer.models.Side
+import com.optionometer.utils.call
+import com.optionometer.utils.put
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.time.Instant
 import java.util.stream.Stream
 import kotlin.math.abs
 import kotlin.test.assertEquals
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TradeTest {
-
-  private val underlying = "DIS"
 
   @Test
   fun `verify no options in trade returns zero profit`() {
@@ -359,46 +357,6 @@ class TradeTest {
       }
       Arguments.of(shortPut, shortCall, target, expected)
     }
-  }
-
-  private fun call(strike: Double, bid: Double, ask: Double): Option {
-    return option(
-      strike,
-      bid,
-      ask,
-      Side.CALL
-    )
-  }
-
-  private fun put(strike: Double, bid: Double, ask: Double): Option {
-    return option(
-      strike,
-      bid,
-      ask,
-      Side.PUT
-    )
-  }
-
-  private fun option(
-    strike: Double,
-    bid: Double,
-    ask: Double,
-    side: Side
-  ): Option {
-    return Option(
-      "${side.name[0]}-$strike",
-      strike,
-      side,
-      Instant.now().epochSecond,
-      0,
-      bid,
-      ask,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-    )
   }
 
 }
