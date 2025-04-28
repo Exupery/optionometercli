@@ -16,6 +16,8 @@ class TradeBuilder(
 
   private val fourLegTrades = buildFourLegTrades()
 
+  val underlyingPrice = optionChain.underlyingPrice
+
   fun spreads(): List<Trade> {
     return spreads
   }

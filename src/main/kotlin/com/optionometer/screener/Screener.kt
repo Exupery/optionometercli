@@ -17,11 +17,27 @@ class Screener(
   fun screen(ticker: String) {
     logger.info("Screening option trades for $ticker between $minDays and $maxDays days to expiration")
     val optionChains = importer.fetchOptionChains(ticker, minDays, maxDays)
-    val tradesByExpiry = optionChains.map { findPotentialTradesByChain(it) }
+    val scoredTrades = scoreTrades(optionChains)
   }
 
-  private fun findPotentialTradesByChain(optionChain: OptionChain) {
+  private fun findPotentialTradesByChain(optionChain: OptionChain): TradeBuilder {
+    val tradeBuilder = TradeBuilder(optionChain)
+    logger.info("Found ${"%,d".format(tradeBuilder.spreads().size)} spreads")
+    logger.info("Found ${"%,d".format(tradeBuilder.threeLegTrades().size)} three leg trades")
+    logger.info("Found ${"%,d".format(tradeBuilder.fourLegTrades().size)} four leg trades")
+    return tradeBuilder
+  }
 
+  private fun scoreTrades(optionChains: List<OptionChain>): List<List<ScoredTrade>> {
+    return optionChains.map {
+      findPotentialTradesByChain(it)
+    }.map { tb ->
+      val scoredSpreads = Scorer.score(tb.spreads(), tb.underlyingPrice)
+      val scoredThreeLegs = Scorer.score(tb.threeLegTrades(), tb.underlyingPrice)
+      val scoredFourLegs = Scorer.score(tb.fourLegTrades(), tb.underlyingPrice)
+
+      (scoredSpreads + scoredThreeLegs + scoredFourLegs).sortedByDescending { it.score }
+    }
   }
 
 }
