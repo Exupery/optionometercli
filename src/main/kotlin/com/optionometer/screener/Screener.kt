@@ -18,6 +18,7 @@ class Screener(
     logger.info("Screening option trades for $ticker between $minDays and $maxDays days to expiration")
     val optionChains = importer.fetchOptionChains(ticker, minDays, maxDays)
     val scoredTrades = scoreTrades(optionChains)
+    println(scoredTrades.first().first()) // TODO DELME
   }
 
   private fun findPotentialTradesByChain(optionChain: OptionChain): TradeBuilder {

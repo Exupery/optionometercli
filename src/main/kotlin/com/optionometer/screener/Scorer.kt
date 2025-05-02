@@ -1,6 +1,7 @@
 package com.optionometer.screener
 
 import com.optionometer.models.Option
+import com.optionometer.screener.Normalizer.normalize
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -9,31 +10,36 @@ private const val MAX_HIGH_SCORES_TO_RETURN = 100
 object Scorer {
 
   fun score(trades: List<Trade>, underlyingPrice: Double): List<ScoredTrade> {
-    return trades.map {
+    val rawScored = trades.mapNotNull {
       score(it, underlyingPrice)
-    }.sortedByDescending {
+    }
+
+    return normalize(rawScored).sortedByDescending {
       it.score
     }.filter {
       it.score > 0
     }.take(MAX_HIGH_SCORES_TO_RETURN)
   }
 
-  private fun score(trade: Trade, underlyingPrice: Double): ScoredTrade {
-    val sd = (trade.sells + trade.buys).maxOfOrNull { calculateImpliedSd(it, underlyingPrice) }!!
+  private fun score(trade: Trade, underlyingPrice: Double): RawScoredTrade? {
+    val sd = (trade.sells + trade.buys).map { calculateImpliedSd(it, underlyingPrice) }.average()
     val sdPrices = StandardDeviationPrices(underlyingPrice, sd)
     val plByPrice = (sdPrices.threeSdDown.toInt()..sdPrices.threeSdUp.toInt()).associateWith {
       trade.profitLossAtPrice(it.toDouble())
     }
 
     // If trade is unprofitable (or barely profitable) at
-    // all price points return early with max negative score
-    if (plByPrice.all { it.value < 1 }) {
-      return (ScoredTrade(Int.MIN_VALUE, emptyMap(), sdPrices, trade))
+    // all price points return early
+    if (plByPrice.all { it.value < 0.5 }) {
+      return null
     }
 
-    val score = scoreByPricePoints(sd, underlyingPrice, plByPrice).toInt()
+    val scoreByPricePoints = scoreByPricePoints(sd, underlyingPrice, plByPrice)
+    val score = Score(
+      scoreByPricePoints
+    )
 
-    return (ScoredTrade(score, plByPrice, sdPrices, trade))
+    return RawScoredTrade(score, plByPrice, sdPrices, trade)
   }
 
   private fun calculateImpliedSd(option: Option, underlyingPrice: Double): Double {
@@ -62,6 +68,17 @@ object Scorer {
 
 }
 
+data class Score(
+  val pricePointScore: Double
+)
+
+data class RawScoredTrade(
+  val score: Score,
+  val plByPrice: Map<Int, Double>,
+  val sdPrices: StandardDeviationPrices,
+  val trade: Trade
+)
+
 data class ScoredTrade(
   val score: Int,
   val plByPrice: Map<Int, Double>,
@@ -71,7 +88,7 @@ data class ScoredTrade(
 
 class StandardDeviationPrices(
   underlyingPrice: Double,
-  standardDeviation: Double
+  private val standardDeviation: Double
 ) {
 
   val oneSdUp = underlyingPrice + standardDeviation
@@ -81,4 +98,7 @@ class StandardDeviationPrices(
   val threeSdUp = underlyingPrice + (standardDeviation * 3)
   val threeSdDown = underlyingPrice - (standardDeviation * 3)
 
+  override fun toString(): String {
+    return "$standardDeviation [$threeSdDown - $threeSdUp]"
+  }
 }
