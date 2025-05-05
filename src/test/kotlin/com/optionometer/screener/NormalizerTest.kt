@@ -35,8 +35,42 @@ class NormalizerTest {
     expected: List<Int>
   ) {
     val rawScoredTrades = plByPriceScores.map { plByPriceScore ->
-      rawScoredTrade(plByPriceScore)
+      rawScoredTrade(plByPriceScore, 0.0, 0.0)
     }
+
+    verify(rawScoredTrades, expected)
+  }
+
+  @ParameterizedTest
+  @MethodSource("scores")
+  fun `verify normalize scores number of profitable price points`(
+    numProfitablePointsScores: List<Double>,
+    expected: List<Int>
+  ) {
+    val rawScoredTrades = numProfitablePointsScores.map { numProfitablePointsScore ->
+      rawScoredTrade(0.0, numProfitablePointsScore, 0.0)
+    }
+
+    verify(rawScoredTrades, expected)
+  }
+
+  @ParameterizedTest
+  @MethodSource("scores")
+  fun `verify normalize scores number of success probability`(
+    probabilityScores: List<Double>,
+    expected: List<Int>
+  ) {
+    val rawScoredTrades = probabilityScores.map { probabilityScore ->
+      rawScoredTrade(0.0, 0.0, probabilityScore)
+    }
+
+    verify(rawScoredTrades, expected)
+  }
+
+  private fun verify(
+    rawScoredTrades: List<RawScoredTrade>,
+    expected: List<Int>
+  ) {
     val scored = Normalizer.normalize(rawScoredTrades)
     assertFalse(scored.isEmpty())
     assertEquals(expected.size, scored.size)
@@ -59,12 +93,14 @@ class NormalizerTest {
   }
 
   private fun rawScoredTrade(
-    plByPriceScore: Double
+    plByPriceScore: Double,
+    numProfitablePointsScore: Double,
+    probabilityScore: Double
   ): RawScoredTrade {
-    val score = Score(plByPriceScore)
+    val score = Score(plByPriceScore, numProfitablePointsScore, probabilityScore)
     val option = mockk<Option>(relaxed = true)
     every { option.symbol } returns UUID.randomUUID().toString()
     val trade = Trade(listOf(option), emptyList())
-    return RawScoredTrade(score, emptyMap(), testStandardDeviationPrices, trade)
+    return RawScoredTrade(score, emptyMap(), testStandardDeviationPrices, probabilityScore, trade)
   }
 }

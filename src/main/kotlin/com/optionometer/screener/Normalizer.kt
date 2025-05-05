@@ -7,8 +7,13 @@ object Normalizer {
   fun normalize(rawScoredTrades: List<RawScoredTrade>): List<ScoredTrade> {
     val cohort = rawScoredTrades.associateBy { generateTradeUuid(it.trade) }
     val pricePointScores = normalize(cohort.map { (id, rst) -> id to rst.score.pricePointScore })
+    val numProfitPointScores = normalize(cohort.map { (id, rst) -> id to rst.score.numProfitablePointsScore })
+    val probabilityScores = normalize(cohort.map { (id, rst) -> id to rst.score.scoreByProbability })
+
     return cohort.map { (id, rst) ->
-      val score = pricePointScores.getOrDefault(id, 0.0)
+      val score = pricePointScores.getOrDefault(id, 0.0) +
+          numProfitPointScores.getOrDefault(id, 0.0) +
+          probabilityScores.getOrDefault(id, 0.0)
       scoredTradeFromRawScoredTrade(score.toInt(), rst)
     }
   }
@@ -18,7 +23,12 @@ object Normalizer {
     val interval = 100.0 / (cohortSize - 1)
     val sorted = rawScores.sortedBy { it.second }
     return sorted.withIndex().associate { indexedValue ->
-      val percentile = indexedValue.index * interval
+      // Only use actual percentile for positive non-zero scores
+      val percentile = if (indexedValue.value.second <= 0.0) {
+        0.0
+      } else {
+        indexedValue.index * interval
+      }
       indexedValue.value.first to percentile
     }
   }
@@ -28,6 +38,7 @@ object Normalizer {
       score,
       raw.plByPrice,
       raw.sdPrices,
+      raw.successProbability,
       raw.trade
     )
   }
