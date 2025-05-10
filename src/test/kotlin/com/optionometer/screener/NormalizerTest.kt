@@ -35,7 +35,7 @@ class NormalizerTest {
     expected: List<Int>
   ) {
     val rawScoredTrades = plByPriceScores.map { plByPriceScore ->
-      rawScoredTrade(plByPriceScore, 0.0, 0.0)
+      rawScoredTrade(plByPriceScore, 0.0, 0.0, 0.0, 0.0)
     }
 
     verify(rawScoredTrades, expected)
@@ -48,7 +48,7 @@ class NormalizerTest {
     expected: List<Int>
   ) {
     val rawScoredTrades = numProfitablePointsScores.map { numProfitablePointsScore ->
-      rawScoredTrade(0.0, numProfitablePointsScore, 0.0)
+      rawScoredTrade(0.0, numProfitablePointsScore, 0.0, 0.0, 0.0)
     }
 
     verify(rawScoredTrades, expected)
@@ -61,7 +61,33 @@ class NormalizerTest {
     expected: List<Int>
   ) {
     val rawScoredTrades = probabilityScores.map { probabilityScore ->
-      rawScoredTrade(0.0, 0.0, probabilityScore)
+      rawScoredTrade(0.0, 0.0, probabilityScore, 0.0, 0.0)
+    }
+
+    verify(rawScoredTrades, expected)
+  }
+
+  @ParameterizedTest
+  @MethodSource("scores")
+  fun `verify normalize scores profit loss ratio`(
+    maxProfitLossScores: List<Double>,
+    expected: List<Int>
+  ) {
+    val rawScoredTrades = maxProfitLossScores.map { maxProfitLossScore ->
+      rawScoredTrade(0.0, 0.0, 0.0, maxProfitLossScore, 0.0)
+    }
+
+    verify(rawScoredTrades, expected)
+  }
+
+  @ParameterizedTest
+  @MethodSource("scores")
+  fun `verify normalize scores by annualized return`(
+    annualizedReturns: List<Double>,
+    expected: List<Int>
+  ) {
+    val rawScoredTrades = annualizedReturns.map { annualizedReturn ->
+      rawScoredTrade(0.0, 0.0, 0.0, 0.0, annualizedReturn)
     }
 
     verify(rawScoredTrades, expected)
@@ -95,12 +121,25 @@ class NormalizerTest {
   private fun rawScoredTrade(
     plByPriceScore: Double,
     numProfitablePointsScore: Double,
-    probabilityScore: Double
+    probabilityScore: Double,
+    maxProfitToMaxLossRatio: Double,
+    annualizedMaxReturn: Double
   ): RawScoredTrade {
-    val score = Score(plByPriceScore, numProfitablePointsScore, probabilityScore)
+    val score = Score(
+      plByPriceScore,
+      numProfitablePointsScore,
+      probabilityScore,
+      maxProfitToMaxLossRatio,
+      annualizedMaxReturn
+    )
     val option = mockk<Option>(relaxed = true)
     every { option.symbol } returns UUID.randomUUID().toString()
     val trade = Trade(listOf(option), emptyList())
-    return RawScoredTrade(score, emptyMap(), testStandardDeviationPrices, probabilityScore, trade)
+    val maxProfitLoss = MaxProfitLoss(
+      maxProfitToMaxLossRatio,
+      100.0,
+      100.0 * (maxProfitToMaxLossRatio / 100)
+    )
+    return RawScoredTrade(score, emptyMap(), testStandardDeviationPrices, maxProfitLoss, trade)
   }
 }

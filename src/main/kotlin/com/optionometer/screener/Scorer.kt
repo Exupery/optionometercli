@@ -39,14 +39,19 @@ object Scorer {
 
     val scoreByPricePoints = scoreByPricePoints(plByPrice, underlyingPrice, sd)
     val scoreByNumProfitablePoints = scoreByNumProfitablePoints(plByPrice, sdPrices)
-    val scoreByProbability = successProbability(plByPrice, underlyingPrice, sd)
+    val probability = successProbability(plByPrice, underlyingPrice, sd)
+    val maxProfitLoss = maxProfitLoss(plByPrice)
+    val dte = (trade.sells + trade.buys).first().dte
+    val annualReturn = maxAnnualReturn(dte, probability, maxProfitLoss)
     val score = Score(
       scoreByPricePoints,
       scoreByNumProfitablePoints,
-      scoreByProbability
+      probability,
+      maxProfitLoss.maxProfitToMaxLossRatio,
+      annualReturn
     )
 
-    return RawScoredTrade(score, plByPrice, sdPrices, scoreByProbability, trade)
+    return RawScoredTrade(score, plByPrice, sdPrices, maxProfitLoss, trade)
   }
 
   private fun calculateImpliedSd(option: Option, underlyingPrice: Double): Double {
@@ -135,19 +140,48 @@ object Scorer {
     return ranges.toList()
   }
 
+  private fun maxProfitLoss(
+    plByPrice: Map<Int, Double>
+  ): MaxProfitLoss {
+    val maxProfit = plByPrice.values.max()
+    val maxLoss = plByPrice.values.min()
+    val ratio = if (maxLoss < 0) {
+      maxProfit / abs(maxLoss)
+    } else {
+      // Highly unlikely any trade would have a max loss of zero (or
+      // be profitable at all points) but handle that gracefully
+      maxProfit
+    }
+    return MaxProfitLoss(ratio, maxProfit, maxLoss)
+  }
+
+  private fun maxAnnualReturn(
+    dte: Int,
+    probability: Double,
+    maxProfitLoss: MaxProfitLoss
+  ): Double {
+    val numTradesPerYear = max(365 / dte, 1)
+    val profit = numTradesPerYear * (probability / 100) * maxProfitLoss.maxProfit
+    val loss = numTradesPerYear * ((100 - probability) / 100) * maxProfitLoss.maxLoss
+    // Add because maxLoss is negative
+    return profit + loss
+  }
+
 }
 
 data class Score(
   val pricePointScore: Double,
   val numProfitablePointsScore: Double,
-  val scoreByProbability: Double
+  val scoreByProbability: Double,
+  val maxProfitToMaxLossRatio: Double,
+  val annualizedMaxReturn: Double
 )
 
 data class RawScoredTrade(
   val score: Score,
   val plByPrice: Map<Int, Double>,
   val sdPrices: StandardDeviationPrices,
-  val successProbability: Double,
+  val maxProfitLoss: MaxProfitLoss,
   val trade: Trade
 )
 
@@ -156,7 +190,15 @@ data class ScoredTrade(
   val plByPrice: Map<Int, Double>,
   val sdPrices: StandardDeviationPrices,
   val successProbability: Double,
+  val maxProfitLoss: MaxProfitLoss,
+  val annualizedMaxReturn: Double,
   val trade: Trade
+)
+
+data class MaxProfitLoss(
+  val maxProfitToMaxLossRatio: Double,
+  val maxProfit: Double,
+  val maxLoss: Double
 )
 
 class StandardDeviationPrices(
@@ -164,10 +206,6 @@ class StandardDeviationPrices(
   private val standardDeviation: Double
 ) {
 
-  val oneSdUp = underlyingPrice + standardDeviation
-  val oneSdDown = max(underlyingPrice - standardDeviation, 0.0)
-  val twoSdUp = underlyingPrice + (standardDeviation * 2)
-  val twoSdDown = max(underlyingPrice - (standardDeviation * 2), 0.0)
   val threeSdUp = underlyingPrice + (standardDeviation * 3)
   val threeSdDown = max(underlyingPrice - (standardDeviation * 3), 0.0)
 

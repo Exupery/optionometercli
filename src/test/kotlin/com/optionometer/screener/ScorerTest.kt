@@ -86,6 +86,26 @@ class ScorerTest {
     assertTrue(largeProfitScore!!.score.scoreByProbability > smallProfitScore.score.scoreByProbability)
   }
 
+  @Test
+  fun `scores by max profit loss ratio`() {
+    val smallProfitScore = callPrivateScore(smallProfit)
+    assertNotNull(smallProfitScore)
+    assertTrue(smallProfitScore!!.score.maxProfitToMaxLossRatio > 0)
+    val largeProfitScore = callPrivateScore(largeProfit)
+    assertNotNull(largeProfitScore)
+    assertTrue(largeProfitScore!!.score.maxProfitToMaxLossRatio > smallProfitScore.score.maxProfitToMaxLossRatio)
+  }
+
+  @Test
+  fun `scores by annualized return`() {
+    val smallProfitScore = callPrivateScore(smallProfit)
+    assertNotNull(smallProfitScore)
+    assertTrue(smallProfitScore!!.score.annualizedMaxReturn > 0)
+    val largeProfitScore = callPrivateScore(largeProfit)
+    assertNotNull(largeProfitScore)
+    assertTrue(largeProfitScore!!.score.annualizedMaxReturn > smallProfitScore.score.annualizedMaxReturn)
+  }
+
   private fun callPrivateScore(trade: Trade): RawScoredTrade? {
     return Scorer::class.declaredFunctions
       .first { it.name == "score" && it.visibility == KVisibility.PRIVATE }
