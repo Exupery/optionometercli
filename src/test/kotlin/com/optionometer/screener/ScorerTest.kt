@@ -37,6 +37,8 @@ class ScorerTest {
     every { largeProfit.buys } returns emptyList()
     every { largeProfit.sells } returns listOf(call)
     every { largeProfit.profitLossAtPrice(any()) } returns 200.0
+    every { largeProfit.profitLossAtPrice(underlyingPrice) } returns -1.0
+    every { largeProfit.profitLossAtPrice(underlyingPrice - 1.0) } returns -1.0
   }
 
   @Test
@@ -100,10 +102,10 @@ class ScorerTest {
   fun `scores by annualized return`() {
     val smallProfitScore = callPrivateScore(smallProfit)
     assertNotNull(smallProfitScore)
-    assertTrue(smallProfitScore!!.score.annualizedMaxReturn > 0)
+    assertTrue(smallProfitScore!!.score.annualizedReturn > 0)
     val largeProfitScore = callPrivateScore(largeProfit)
     assertNotNull(largeProfitScore)
-    assertTrue(largeProfitScore!!.score.annualizedMaxReturn > smallProfitScore.score.annualizedMaxReturn)
+    assertTrue(largeProfitScore!!.score.annualizedReturn > smallProfitScore.score.annualizedReturn)
   }
 
   private fun callPrivateScore(trade: Trade): RawScoredTrade? {

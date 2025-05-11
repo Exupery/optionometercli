@@ -123,14 +123,14 @@ class NormalizerTest {
     numProfitablePointsScore: Double,
     probabilityScore: Double,
     maxProfitToMaxLossRatio: Double,
-    annualizedMaxReturn: Double
+    annualizedReturn: Double
   ): RawScoredTrade {
     val score = Score(
       plByPriceScore,
       numProfitablePointsScore,
       probabilityScore,
       maxProfitToMaxLossRatio,
-      annualizedMaxReturn
+      annualizedReturn
     )
     val option = mockk<Option>(relaxed = true)
     every { option.symbol } returns UUID.randomUUID().toString()
