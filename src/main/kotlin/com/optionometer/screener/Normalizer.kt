@@ -4,6 +4,8 @@ import java.util.UUID
 
 object Normalizer {
 
+  private val weigher = Weigher()
+
   fun normalize(rawScoredTrades: List<RawScoredTrade>): List<ScoredTrade> {
     val cohort = rawScoredTrades.associateBy { generateTradeUuid(it.trade) }
     val pricePointScores = normalize(cohort.map { (id, rst) -> id to rst.score.pricePointScore })
@@ -14,12 +16,14 @@ object Normalizer {
     val deltaScores = normalize(cohort.map { (id, rst) -> id to rst.score.deltaScore })
 
     return cohort.map { (id, rst) ->
-      val score = pricePointScores.getOrDefault(id, 0.0) +
-          numProfitPointScores.getOrDefault(id, 0.0) +
-          probabilityScores.getOrDefault(id, 0.0) +
-          maxProfitLossScores.getOrDefault(id, 0.0) +
-          annualReturnScores.getOrDefault(id, 0.0) +
-          deltaScores.getOrDefault(id, 0.0)
+      val score = weigher.scoreByWeight(
+        pricePointScores.getOrDefault(id, 0.0),
+        numProfitPointScores.getOrDefault(id, 0.0),
+        probabilityScores.getOrDefault(id, 0.0),
+        maxProfitLossScores.getOrDefault(id, 0.0),
+        annualReturnScores.getOrDefault(id, 0.0),
+        deltaScores.getOrDefault(id, 0.0)
+      )
       scoredTradeFromRawScoredTrade(score.toInt(), rst)
     }
   }
