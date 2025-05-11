@@ -94,7 +94,7 @@ class MarketDataImporter(
         optionChainResponse.theta[idx],
         optionChainResponse.vega[idx]
       )
-    }
+    }.filterNot { it.impliedVolatility == 0.0 }
 
     val underlyingPrice = optionChainResponse.underlyingPrice.firstOrNull() ?: return emptyList()
     val byExpiry = options.groupBy { it.expiry }
