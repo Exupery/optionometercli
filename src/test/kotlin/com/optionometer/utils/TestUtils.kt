@@ -33,13 +33,10 @@ private fun option(
     strike,
     side,
     Instant.now().epochSecond,
-    0,
+    10,
     bid,
     ask,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
+    0.5,
+    0.5
   )
 }

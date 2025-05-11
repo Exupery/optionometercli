@@ -9,10 +9,7 @@ data class Option(
   val bid: Double,
   val ask: Double,
   val impliedVolatility: Double,
-  val delta: Double,
-  val gamma: Double,
-  val theta: Double,
-  val vega: Double
+  val delta: Double
 )
 
 enum class Side {

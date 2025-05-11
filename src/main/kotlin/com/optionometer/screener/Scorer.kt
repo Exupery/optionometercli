@@ -8,7 +8,7 @@ import kotlin.math.max
 import kotlin.math.sqrt
 
 private const val MAX_HIGH_SCORES_TO_RETURN = 100
-private const val MIN_PROFIT_AMOUNT = 0.05
+private const val MIN_PROFIT_AMOUNT = 0.15
 
 object Scorer {
 
@@ -118,6 +118,9 @@ object Scorer {
   private fun ranges(
     prices: List<Int>
   ): List<Int> {
+    if (prices.isEmpty()) {
+      return emptyList()
+    }
     val sorted = prices.sorted()
     val ranges = mutableListOf<Int>()
     var lastPrice = sorted.first()
@@ -174,7 +177,7 @@ object Scorer {
       }.average()
     }
     val profitPls = plByPrice.filter { it.value > MIN_PROFIT_AMOUNT }
-    val lossPls = plByPrice.filter { it.value < MIN_PROFIT_AMOUNT }
+    val lossPls = plByPrice.filter { it.value <= MIN_PROFIT_AMOUNT }
     val profitAvg = avg(profitPls)
     val lossAvg = avg(lossPls)
     val numTradesPerYear = max(365 / dte, 1)

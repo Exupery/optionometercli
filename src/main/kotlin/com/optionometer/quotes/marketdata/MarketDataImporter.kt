@@ -89,10 +89,7 @@ class MarketDataImporter(
         optionChainResponse.bid[idx],
         optionChainResponse.ask[idx],
         optionChainResponse.iv[idx],
-        optionChainResponse.delta[idx],
-        optionChainResponse.gamma[idx],
-        optionChainResponse.theta[idx],
-        optionChainResponse.vega[idx]
+        optionChainResponse.delta[idx]
       )
     }.filterNot { it.impliedVolatility == 0.0 }
 
