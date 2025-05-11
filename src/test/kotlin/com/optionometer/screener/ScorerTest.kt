@@ -27,15 +27,17 @@ class ScorerTest {
   fun setup() {
     every { call.impliedVolatility } returns 0.5
     every { call.dte } returns 365
+    every { call.delta } returns 0.8
     every { put.impliedVolatility } returns 0.5
     every { put.dte } returns 365
-    every { smallProfit.buys } returns listOf(call)
+    every { put.delta } returns -0.4
+    every { smallProfit.buys } returns listOf(put)
     every { smallProfit.sells } returns emptyList()
     every { smallProfit.profitLossAtPrice(any()) } returns -1.0
     every { smallProfit.profitLossAtPrice(underlyingPrice) } returns 100.0
     every { smallProfit.profitLossAtPrice(underlyingPrice + 1.0) } returns 100.0
-    every { largeProfit.buys } returns emptyList()
-    every { largeProfit.sells } returns listOf(call)
+    every { largeProfit.buys } returns listOf(call)
+    every { largeProfit.sells } returns emptyList()
     every { largeProfit.profitLossAtPrice(any()) } returns 200.0
     every { largeProfit.profitLossAtPrice(underlyingPrice) } returns -1.0
     every { largeProfit.profitLossAtPrice(underlyingPrice - 1.0) } returns -1.0
@@ -106,6 +108,16 @@ class ScorerTest {
     val largeProfitScore = callPrivateScore(largeProfit)
     assertNotNull(largeProfitScore)
     assertTrue(largeProfitScore!!.score.annualizedReturn > smallProfitScore.score.annualizedReturn)
+  }
+
+  @Test
+  fun `scores by deltas`() {
+    val smallProfitScore = callPrivateScore(smallProfit)
+    assertNotNull(smallProfitScore)
+    assertTrue(smallProfitScore!!.score.deltaScore > 0)
+    val largeProfitScore = callPrivateScore(largeProfit)
+    assertNotNull(largeProfitScore)
+    assertTrue(largeProfitScore!!.score.deltaScore > smallProfitScore.score.deltaScore)
   }
 
   private fun callPrivateScore(trade: Trade): RawScoredTrade? {

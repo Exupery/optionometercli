@@ -43,15 +43,17 @@ object Scorer {
     val maxProfitLoss = maxProfitLoss(plByPrice)
     val dte = (trade.sells + trade.buys).first().dte
     val annualReturn = avgAnnualReturn(dte, probability, plByPrice, sdPrices)
+    val deltas = deltas(trade)
     val score = Score(
       scoreByPricePoints,
       scoreByNumProfitablePoints,
       probability,
       maxProfitLoss.maxProfitToMaxLossRatio,
-      annualReturn
+      annualReturn,
+      deltas.deltaScore
     )
 
-    return RawScoredTrade(score, plByPrice, sdPrices, maxProfitLoss, trade)
+    return RawScoredTrade(score, plByPrice, sdPrices, maxProfitLoss, deltas.tradeDelta, trade)
   }
 
   private fun calculateImpliedSd(option: Option, underlyingPrice: Double): Double {
@@ -187,6 +189,15 @@ object Scorer {
     return profit + loss
   }
 
+  private fun deltas(
+    trade: Trade
+  ): Deltas {
+    val sum = (trade.sells + trade.buys).sumOf { it.delta }
+    val score = trade.buys.sumOf { abs(it.delta) } - trade.sells.sumOf { abs(it.delta) }
+
+    return Deltas(sum, score)
+  }
+
 }
 
 data class Score(
@@ -194,7 +205,8 @@ data class Score(
   val numProfitablePointsScore: Double,
   val scoreByProbability: Double,
   val maxProfitToMaxLossRatio: Double,
-  val annualizedReturn: Double
+  val annualizedReturn: Double,
+  val deltaScore: Double
 )
 
 data class RawScoredTrade(
@@ -202,6 +214,7 @@ data class RawScoredTrade(
   val plByPrice: Map<Int, Double>,
   val sdPrices: StandardDeviationPrices,
   val maxProfitLoss: MaxProfitLoss,
+  val tradeDelta: Double,
   val trade: Trade
 )
 
@@ -212,6 +225,7 @@ data class ScoredTrade(
   val successProbability: Double,
   val maxProfitLoss: MaxProfitLoss,
   val annualizedReturn: Double,
+  val tradeDelta: Double,
   val trade: Trade
 )
 
@@ -219,6 +233,11 @@ data class MaxProfitLoss(
   val maxProfitToMaxLossRatio: Double,
   val maxProfit: Double,
   val maxLoss: Double
+)
+
+data class Deltas(
+  val tradeDelta: Double,
+  val deltaScore: Double
 )
 
 class StandardDeviationPrices(

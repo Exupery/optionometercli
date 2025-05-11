@@ -11,13 +11,15 @@ object Normalizer {
     val probabilityScores = normalize(cohort.map { (id, rst) -> id to rst.score.scoreByProbability })
     val maxProfitLossScores = normalize(cohort.map { (id, rst) -> id to rst.score.maxProfitToMaxLossRatio })
     val annualReturnScores = normalize(cohort.map { (id, rst) -> id to rst.score.annualizedReturn })
+    val deltaScores = normalize(cohort.map { (id, rst) -> id to rst.score.deltaScore })
 
     return cohort.map { (id, rst) ->
       val score = pricePointScores.getOrDefault(id, 0.0) +
           numProfitPointScores.getOrDefault(id, 0.0) +
           probabilityScores.getOrDefault(id, 0.0) +
           maxProfitLossScores.getOrDefault(id, 0.0) +
-          annualReturnScores.getOrDefault(id, 0.0)
+          annualReturnScores.getOrDefault(id, 0.0) +
+          deltaScores.getOrDefault(id, 0.0)
       scoredTradeFromRawScoredTrade(score.toInt(), rst)
     }
   }
@@ -45,6 +47,7 @@ object Normalizer {
       raw.score.scoreByProbability,
       raw.maxProfitLoss,
       raw.score.annualizedReturn,
+      raw.tradeDelta,
       raw.trade
     )
   }
