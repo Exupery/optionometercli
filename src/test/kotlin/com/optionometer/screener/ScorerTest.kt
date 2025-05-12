@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import kotlin.random.Random
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.jvm.isAccessible
@@ -33,7 +34,7 @@ class ScorerTest {
     every { put.delta } returns -0.4
     every { smallProfit.buys } returns listOf(put)
     every { smallProfit.sells } returns emptyList()
-    every { smallProfit.profitLossAtPrice(any()) } returns -1.0
+    every { smallProfit.profitLossAtPrice(any()) } answers { Random.nextDouble(-10.0, -1.0) }
     every { smallProfit.profitLossAtPrice(underlyingPrice) } returns 100.0
     every { smallProfit.profitLossAtPrice(underlyingPrice + 1.0) } returns 100.0
     every { largeProfit.buys } returns listOf(call)
@@ -94,10 +95,10 @@ class ScorerTest {
   fun `scores by max profit loss ratio`() {
     val smallProfitScore = callPrivateScore(smallProfit)
     assertNotNull(smallProfitScore)
-    assertTrue(smallProfitScore!!.score.maxProfitToMaxLossRatio > 0)
+    assertTrue(smallProfitScore!!.score.maxLossRatio > 0)
     val largeProfitScore = callPrivateScore(largeProfit)
     assertNotNull(largeProfitScore)
-    assertTrue(largeProfitScore!!.score.maxProfitToMaxLossRatio > smallProfitScore.score.maxProfitToMaxLossRatio)
+    assertTrue(largeProfitScore!!.score.maxLossRatio > smallProfitScore.score.maxLossRatio)
   }
 
   @Test

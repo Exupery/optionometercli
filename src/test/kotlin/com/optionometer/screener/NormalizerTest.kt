@@ -153,7 +153,8 @@ class NormalizerTest {
     val maxProfitLoss = MaxProfitLoss(
       maxProfitToMaxLossRatio,
       100.0,
-      100.0 * (maxProfitToMaxLossRatio / 100)
+      100.0 * (maxProfitToMaxLossRatio / 100),
+      maxProfitToMaxLossRatio
     )
     return RawScoredTrade(score, emptyMap(), testStandardDeviationPrices, maxProfitLoss, delta, trade)
   }

@@ -11,7 +11,7 @@ object Normalizer {
     val pricePointScores = normalize(cohort.map { (id, rst) -> id to rst.score.pricePointScore })
     val numProfitPointScores = normalize(cohort.map { (id, rst) -> id to rst.score.numProfitablePointsScore })
     val probabilityScores = normalize(cohort.map { (id, rst) -> id to rst.score.scoreByProbability })
-    val maxProfitLossScores = normalize(cohort.map { (id, rst) -> id to rst.score.maxProfitToMaxLossRatio })
+    val maxProfitLossScores = normalize(cohort.map { (id, rst) -> id to rst.score.maxLossRatio })
     val annualReturnScores = normalize(cohort.map { (id, rst) -> id to rst.score.annualizedReturn })
     val deltaScores = normalize(cohort.map { (id, rst) -> id to rst.score.deltaScore })
 

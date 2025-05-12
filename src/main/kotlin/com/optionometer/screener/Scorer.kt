@@ -48,7 +48,7 @@ object Scorer {
       scoreByPricePoints,
       scoreByNumProfitablePoints,
       probability,
-      maxProfitLoss.maxProfitToMaxLossRatio,
+      maxProfitLoss.score,
       annualReturn,
       deltas.deltaScore
     )
@@ -157,7 +157,12 @@ object Scorer {
       // be profitable at all points) but handle that gracefully
       maxProfit
     }
-    return MaxProfitLoss(ratio, maxProfit, maxLoss)
+    // For score favor trades with limited downside
+    val losses = plByPrice.values.filter { it < MIN_PROFIT_AMOUNT }
+    val numLossesAtMaxLoss = losses.filter { it == maxLoss }.size
+    val score = numLossesAtMaxLoss.toDouble() / losses.size
+    println(losses) // TODO DELME
+    return MaxProfitLoss(ratio, maxProfit, maxLoss, score)
   }
 
   private fun avgAnnualReturn(
@@ -204,7 +209,7 @@ data class Score(
   val pricePointScore: Double,
   val numProfitablePointsScore: Double,
   val scoreByProbability: Double,
-  val maxProfitToMaxLossRatio: Double,
+  val maxLossRatio: Double,
   val annualizedReturn: Double,
   val deltaScore: Double
 )
@@ -232,7 +237,8 @@ data class ScoredTrade(
 data class MaxProfitLoss(
   val maxProfitToMaxLossRatio: Double,
   val maxProfit: Double,
-  val maxLoss: Double
+  val maxLoss: Double,
+  val score: Double
 )
 
 data class Deltas(
