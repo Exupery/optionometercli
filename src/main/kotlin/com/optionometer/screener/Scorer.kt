@@ -40,9 +40,9 @@ object Scorer {
     val scoreByPricePoints = scoreByPricePoints(plByPrice, underlyingPrice, sd)
     val scoreByNumProfitablePoints = scoreByNumProfitablePoints(plByPrice, sdPrices)
     val probability = successProbability(plByPrice, underlyingPrice, sd)
-    val maxProfitLoss = maxProfitLoss(plByPrice)
+    val maxProfitLoss = maxProfitLoss(plByPrice, sdPrices)
     val dte = (trade.sells + trade.buys).first().dte
-    val annualReturn = avgAnnualReturn(dte, probability, plByPrice, sdPrices)
+    val annualReturn = annualReturnScore(dte, probability, plByPrice, sdPrices)
     val deltas = deltas(trade)
     val score = Score(
       scoreByPricePoints,
@@ -146,26 +146,26 @@ object Scorer {
   }
 
   private fun maxProfitLoss(
-    plByPrice: Map<Int, Double>
+    plByPrice: Map<Int, Double>,
+    sdPrices: StandardDeviationPrices
   ): MaxProfitLoss {
-    val maxProfit = plByPrice.values.max()
-    val maxLoss = plByPrice.values.min()
-    val ratio = if (maxLoss < 0) {
-      maxProfit / abs(maxLoss)
+    val max1SdProfit = plByPrice.filter { sdPrices.sdBand(it.key.toDouble()) < 2 }.values.max()
+    val max2SdLoss = plByPrice.filter { sdPrices.sdBand(it.key.toDouble()) < 3 }.values.min()
+    val ratio = if (max2SdLoss < 0) {
+      max1SdProfit / abs(max2SdLoss)
     } else {
       // Highly unlikely any trade would have a max loss of zero (or
       // be profitable at all points) but handle that gracefully
-      maxProfit
+      max1SdProfit
     }
     // For score favor trades with limited downside
     val losses = plByPrice.values.filter { it < MIN_PROFIT_AMOUNT }
-    val numLossesAtMaxLoss = losses.filter { it == maxLoss }.size
+    val numLossesAtMaxLoss = losses.filter { it == max2SdLoss }.size
     val score = numLossesAtMaxLoss.toDouble() / losses.size
-    println(losses) // TODO DELME
-    return MaxProfitLoss(ratio, maxProfit, maxLoss, score)
+    return MaxProfitLoss(ratio, max1SdProfit, max2SdLoss, score)
   }
 
-  private fun avgAnnualReturn(
+  private fun annualReturnScore(
     dte: Int,
     probability: Double,
     plByPrice: Map<Int, Double>,
@@ -176,8 +176,14 @@ object Scorer {
         val sdBand = sdPrices.sdBand(price.toDouble())
         val multiplier = when (sdBand) {
           0, 1 -> 1.0
-          2 -> 0.3
-          3 -> 0.03
+          2 -> {
+            if (pl < MIN_PROFIT_AMOUNT) {
+              0.3
+            } else {
+              0.03
+            }
+          }
+
           else -> 0.0
         }
         multiplier * pl
