@@ -1,12 +1,16 @@
 package com.optionometer.screener
 
+import org.slf4j.LoggerFactory
 import java.util.UUID
 
 object Normalizer {
 
+  private val logger = LoggerFactory.getLogger(javaClass)
+
   private val weigher = Weigher()
 
   fun normalize(rawScoredTrades: List<RawScoredTrade>): List<ScoredTrade> {
+    logger.info("Normalizing ${"%,d".format(rawScoredTrades.size)} trades")
     val cohort = rawScoredTrades.associateBy { generateTradeUuid(it.trade) }
     val pricePointScores = normalize(cohort.map { (id, rst) -> id to rst.score.pricePointScore })
     val numProfitPointScores = normalize(cohort.map { (id, rst) -> id to rst.score.numProfitablePointsScore })

@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
+import java.time.Duration
+import java.time.Instant
 
 private const val DEFAULT_TICKER = "QQQ"
 
@@ -15,6 +17,7 @@ class MainApplication(@Autowired val screener: Screener) : CommandLineRunner {
   private val logger = LoggerFactory.getLogger(javaClass)
 
   override fun run(vararg args: String?) {
+    val start = Instant.now()
     val ticker = if (args.isNotEmpty()) {
       val arg1 = args[0]
       if (arg1.isNullOrBlank()) {
@@ -26,6 +29,9 @@ class MainApplication(@Autowired val screener: Screener) : CommandLineRunner {
     }
     logger.info("Optionometer started with ticker $ticker")
     screener.screen(ticker)
+    val duration = Duration.between(start, Instant.now())
+    val durStr = "${duration.toMinutesPart()}m ${duration.toSecondsPart()}s"
+    logger.info("Optionometer complete for $ticker after $durStr")
   }
 }
 

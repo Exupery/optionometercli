@@ -3,6 +3,7 @@ package com.optionometer.screener
 import com.optionometer.models.Option
 import com.optionometer.screener.Normalizer.normalize
 import org.apache.commons.statistics.distribution.NormalDistribution
+import org.slf4j.LoggerFactory
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.sqrt
@@ -12,7 +13,10 @@ private const val MIN_PROFIT_AMOUNT = 0.15
 
 object Scorer {
 
+  private val logger = LoggerFactory.getLogger(javaClass)
+
   fun score(trades: List<Trade>, underlyingPrice: Double): List<ScoredTrade> {
+    logger.info("Scoring ${"%,d".format(trades.size)} trades")
     val rawScored = trades.mapNotNull {
       score(it, underlyingPrice)
     }
