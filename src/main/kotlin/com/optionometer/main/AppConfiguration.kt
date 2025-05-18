@@ -32,9 +32,10 @@ class AppConfiguration {
   fun screener(
     importer: Importer,
     @Value("\${screener.expiration.minDays}") minDays: Int,
-    @Value("\${screener.expiration.maxDays}") maxDays: Int
+    @Value("\${screener.expiration.maxDays}") maxDays: Int,
+    @Value("\${screener.numLegs}") numLegs: String
   ): Screener {
-    return Screener(importer, minDays, maxDays)
+    return Screener(importer, minDays, maxDays, numLegs)
   }
 
 }
