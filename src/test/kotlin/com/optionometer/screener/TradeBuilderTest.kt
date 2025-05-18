@@ -63,6 +63,29 @@ class TradeBuilderTest {
   }
 
   @Test
+  fun `verify enhanced trades are built correctly`() {
+    val builder = TradeBuilder(optionChain)
+
+    val threeLegTrades = builder.threeLegTrades()
+    assertFalse(threeLegTrades.isEmpty())
+    val enhancedTrades = builder.enhancedTrades(threeLegTrades)
+    assertFalse(enhancedTrades.isEmpty())
+    val numOptionsInChain = optionChain.calls.size + optionChain.puts.size
+    val expectedSize = numOptionsInChain * threeLegTrades.size
+    assertEquals(expectedSize, enhancedTrades.size)
+    enhancedTrades.forEach { trade ->
+      val buys = trade.buys
+      val sells = trade.sells
+      assertFalse(buys.isEmpty())
+      assertFalse(sells.isEmpty())
+      assertEquals(buys.size, sells.size)
+      assertEquals(4, buys.size + sells.size)
+      val strikes = (buys.map { it.strike } + sells.map { it.strike }).toSet()
+      assertNotEquals(1, strikes.size)
+    }
+  }
+
+  @Test
   fun `verify four leg trades are built correctly`() {
     val builder = TradeBuilder(optionChain)
 

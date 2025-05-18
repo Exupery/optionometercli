@@ -4,7 +4,7 @@ import com.optionometer.models.Option
 import com.optionometer.models.OptionChain
 
 class TradeBuilder(
-  optionChain: OptionChain
+  private val optionChain: OptionChain
 ) {
 
   private val spreads = buildSpreads(optionChain.calls, optionChain.calls) +
@@ -24,6 +24,19 @@ class TradeBuilder(
 
   fun threeLegTrades(): List<Trade> {
     return threeLegTrades
+  }
+
+  fun enhancedTrades(trades: List<Trade>): List<Trade> {
+    return trades.flatMap { trade ->
+      (optionChain.calls + optionChain.puts).map { option ->
+        // Only add a leg to the buy/sell side with fewer legs
+        if (trade.buys.size < trade.sells.size) {
+          Trade(trade.buys + option, trade.sells)
+        } else {
+          Trade(trade.buys, trade.sells + option)
+        }
+      }
+    }
   }
 
   fun fourLegTrades(): List<Trade> {
