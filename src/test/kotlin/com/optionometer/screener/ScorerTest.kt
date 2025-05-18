@@ -18,7 +18,7 @@ import kotlin.reflect.jvm.isAccessible
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ScorerTest {
 
-  private val underlyingPrice = 10.0
+  private val underlyingPrice = 100.0
   private val call = mockk<Option>()
   private val put = mockk<Option>()
   private val smallProfit = mockk<Trade>()
@@ -34,12 +34,23 @@ class ScorerTest {
     every { put.delta } returns -0.4
     every { smallProfit.buys } returns listOf(put)
     every { smallProfit.sells } returns emptyList()
-    every { smallProfit.profitLossAtPrice(any()) } answers { Random.nextDouble(-10.0, -1.0) }
+    every { smallProfit.profitLossAtPrice(any()) } answers {
+      val price = firstArg<Double>()
+      if (price < underlyingPrice) {
+        Random.nextDouble(-10.0, 5.0)
+      } else {
+        Random.nextDouble(1.0, 10.0)
+      }
+    }
     every { smallProfit.profitLossAtPrice(underlyingPrice) } returns 100.0
-    every { smallProfit.profitLossAtPrice(underlyingPrice + 1.0) } returns 100.0
+    every { smallProfit.profitLossAtPrice(underlyingPrice + 1.0) } returns 101.0
+    every { smallProfit.profitLossAtPrice(underlyingPrice + 2.0) } returns 102.0
+    every { smallProfit.profitLossAtPrice(underlyingPrice + 3.0) } returns 103.0
+    every { smallProfit.profitLossAtPrice(underlyingPrice + 4.0) } returns 104.0
+    every { smallProfit.profitLossAtPrice(underlyingPrice + 5.0) } returns 105.0
     every { largeProfit.buys } returns listOf(call)
     every { largeProfit.sells } returns emptyList()
-    every { largeProfit.profitLossAtPrice(any()) } returns 200.0
+    every { largeProfit.profitLossAtPrice(any()) } returns 2000.0
     every { largeProfit.profitLossAtPrice(underlyingPrice) } returns -1.0
     every { largeProfit.profitLossAtPrice(underlyingPrice - 1.0) } returns -1.0
   }

@@ -11,23 +11,23 @@ import kotlin.test.assertEquals
 class StandardDeviationPricesTest {
 
   @ParameterizedTest
-  @MethodSource("threeSds")
+  @MethodSource("sds")
   fun `three SD is calculated correctly`(
     underlyingPrice: Double,
     standardDeviation: Double,
     expected: Pair<Double, Double>
   ) {
     val sdp = StandardDeviationPrices(underlyingPrice, standardDeviation)
-    assertEquals(expected.first, sdp.threeSdDown, 0.01)
-    assertEquals(expected.second, sdp.threeSdUp, 0.01)
+    assertEquals(expected.first, sdp.lowerSd, 0.01)
+    assertEquals(expected.second, sdp.upperSd, 0.01)
   }
 
   @SuppressWarnings
-  private fun threeSds(): Stream<Arguments> {
+  private fun sds(): Stream<Arguments> {
     return Stream.of(
-      Arguments.of(10.0, 1.0, Pair(7.0, 13.0)),
-      Arguments.of(10.0, 2.0, Pair(4.0, 16.0)),
-      Arguments.of(10.0, 3.0, Pair(1.0, 19.0))
+      Arguments.of(10.0, 1.0, Pair(8.0, 12.0)),
+      Arguments.of(10.0, 2.0, Pair(6.0, 14.0)),
+      Arguments.of(10.0, 3.0, Pair(4.0, 16.0))
     )
   }
 
@@ -36,19 +36,19 @@ class StandardDeviationPricesTest {
   fun `potentially negative SDs return as zero`(
     underlyingPrice: Double,
     standardDeviation: Double,
-    expectedThreeSdUp: Double
+    expectedSdUp: Double
   ) {
     val sdp = StandardDeviationPrices(underlyingPrice, standardDeviation)
-    assertEquals(0.0, sdp.threeSdDown, 0.01)
-    assertEquals(expectedThreeSdUp, sdp.threeSdUp, 0.01)
+    assertEquals(1.0, sdp.lowerSd, 0.01)
+    assertEquals(expectedSdUp, sdp.upperSd, 0.01)
   }
 
   @SuppressWarnings
   private fun potentiallyNegativeSds(): Stream<Arguments> {
     return Stream.of(
-      Arguments.of(10.0, 3.5, 20.5),
-      Arguments.of(10.0, 5.0, 25.0),
-      Arguments.of(10.0, 20.0, 70.0)
+      Arguments.of(1.0, 3.5, 8.0),
+      Arguments.of(1.0, 5.0, 11.0),
+      Arguments.of(1.0, 20.0, 41.0)
     )
   }
 

@@ -9,7 +9,10 @@ import kotlin.math.max
 import kotlin.math.sqrt
 
 private const val MAX_HIGH_SCORES_TO_RETURN = 100
-private const val MIN_PROFIT_AMOUNT = 0.15
+private const val MIN_PROFIT_AMOUNT = 0.5
+private const val MIN_PROBABILITY = 50
+private const val MIN_ANNUAL_RETURN = 1
+private const val NUM_STANDARD_DEVIATIONS = 2
 
 object Scorer {
 
@@ -31,7 +34,7 @@ object Scorer {
   private fun score(trade: Trade, underlyingPrice: Double): RawScoredTrade? {
     val sd = (trade.sells + trade.buys).map { calculateImpliedSd(it, underlyingPrice) }.average()
     val sdPrices = StandardDeviationPrices(underlyingPrice, sd)
-    val plByPrice = (sdPrices.threeSdDown.toInt()..sdPrices.threeSdUp.toInt()).associateWith {
+    val plByPrice = (sdPrices.lowerSd.toInt()..sdPrices.upperSd.toInt()).associateWith {
       trade.profitLossAtPrice(it.toDouble())
     }
 
@@ -41,12 +44,18 @@ object Scorer {
       return null
     }
 
-    val scoreByPricePoints = scoreByPricePoints(plByPrice, underlyingPrice, sd)
-    val scoreByNumProfitablePoints = scoreByNumProfitablePoints(plByPrice, sdPrices)
     val probability = successProbability(plByPrice, underlyingPrice, sd)
-    val maxProfitLoss = maxProfitLoss(plByPrice, sdPrices)
+    if (probability < MIN_PROBABILITY) {
+      return null
+    }
     val dte = (trade.sells + trade.buys).first().dte
     val annualReturn = annualReturnScore(dte, probability, plByPrice, sdPrices)
+    if (annualReturn < MIN_ANNUAL_RETURN) {
+      return null
+    }
+    val scoreByPricePoints = scoreByPricePoints(plByPrice, underlyingPrice, sd)
+    val scoreByNumProfitablePoints = scoreByNumProfitablePoints(plByPrice, sdPrices)
+    val maxProfitLoss = maxProfitLoss(plByPrice, sdPrices)
     val deltas = deltas(trade)
     val score = Score(
       scoreByPricePoints,
@@ -261,8 +270,8 @@ class StandardDeviationPrices(
   private val standardDeviation: Double
 ) {
 
-  val threeSdUp = underlyingPrice + (standardDeviation * 3)
-  val threeSdDown = max(underlyingPrice - (standardDeviation * 3), 0.0)
+  val upperSd = underlyingPrice + (standardDeviation * NUM_STANDARD_DEVIATIONS)
+  val lowerSd = max(underlyingPrice - (standardDeviation * NUM_STANDARD_DEVIATIONS), 1.0)
 
   fun sdBand(price: Double): Int {
     val diff = abs(underlyingPrice - price)
@@ -270,6 +279,6 @@ class StandardDeviationPrices(
   }
 
   override fun toString(): String {
-    return "$standardDeviation [$threeSdDown - $threeSdUp]"
+    return "$standardDeviation [$lowerSd - $upperSd]"
   }
 }
