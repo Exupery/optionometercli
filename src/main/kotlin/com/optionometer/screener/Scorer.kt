@@ -10,13 +10,14 @@ import kotlin.math.sqrt
 
 private const val MAX_HIGH_SCORES_TO_RETURN = 100
 private const val MIN_PROFIT_AMOUNT = 0.5
-private const val MIN_PROBABILITY = 50
-private const val MIN_ANNUAL_RETURN = 1
 private const val NUM_STANDARD_DEVIATIONS = 2
 
 object Scorer {
 
   private val logger = LoggerFactory.getLogger(javaClass)
+
+  private val minAnnualReturn: Int = System.getProperty("MIN_ANNUAL_RETURN")?.toInt() ?: 1
+  private val minProbability: Int = System.getProperty("MIN_PROBABILITY")?.toInt() ?: 25
 
   fun score(trades: List<Trade>, underlyingPrice: Double): List<ScoredTrade> {
     logger.info("Scoring ${"%,d".format(trades.size)} trades")
@@ -45,12 +46,12 @@ object Scorer {
     }
 
     val probability = successProbability(plByPrice, underlyingPrice, sd)
-    if (probability < MIN_PROBABILITY) {
+    if (probability < minProbability) {
       return null
     }
     val dte = (trade.sells + trade.buys).first().dte
     val annualReturn = annualReturnScore(dte, probability, plByPrice, sdPrices)
-    if (annualReturn < MIN_ANNUAL_RETURN) {
+    if (annualReturn < minAnnualReturn) {
       return null
     }
     val scoreByPricePoints = scoreByPricePoints(plByPrice, underlyingPrice, sd)
