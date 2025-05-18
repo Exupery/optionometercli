@@ -172,11 +172,13 @@ object Scorer {
       // be profitable at all points) but handle that gracefully
       max1SdProfit
     }
+
+    val (losses, profits) = plByPrice.values.partition { it < MIN_PROFIT_AMOUNT }
+    val numLossesAtMaxLoss = losses.filter { it.equivalent(max2SdLoss) }.size
+    val numProfitsAtMaxProfit = profits.filter { it.equivalent(max1SdProfit) }.size
     // For score favor trades with limited downside
-    val losses = plByPrice.values.filter { it < MIN_PROFIT_AMOUNT }
-    val numLossesAtMaxLoss = losses.filter { it == max2SdLoss }.size
     val score = numLossesAtMaxLoss.toDouble() / losses.size
-    return MaxProfitLoss(ratio, max1SdProfit, max2SdLoss, score)
+    return MaxProfitLoss(ratio, numProfitsAtMaxProfit, max1SdProfit, numLossesAtMaxLoss, max2SdLoss, score)
   }
 
   private fun annualReturnScore(
@@ -256,7 +258,9 @@ data class ScoredTrade(
 
 data class MaxProfitLoss(
   val maxProfitToMaxLossRatio: Double,
+  val numMaxProfit: Int,
   val maxProfit: Double,
+  val numMaxLoss: Int,
   val maxLoss: Double,
   val score: Double
 )
@@ -282,4 +286,8 @@ class StandardDeviationPrices(
   override fun toString(): String {
     return "$standardDeviation [$lowerSd - $upperSd]"
   }
+}
+
+fun Double.equivalent(other: Double): Boolean {
+  return abs(other - this) < 0.01
 }

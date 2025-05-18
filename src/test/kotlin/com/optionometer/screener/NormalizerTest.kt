@@ -152,7 +152,9 @@ class NormalizerTest {
     val trade = Trade(listOf(option), emptyList())
     val maxProfitLoss = MaxProfitLoss(
       maxProfitToMaxLossRatio,
+      5,
       100.0,
+      5,
       100.0 * (maxProfitToMaxLossRatio / 100),
       maxProfitToMaxLossRatio
     )
