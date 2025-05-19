@@ -2,6 +2,7 @@ package com.optionometer.screener
 
 import com.optionometer.models.Option
 import com.optionometer.models.OptionChain
+import kotlin.math.min
 
 class TradeBuilder(
   private val optionChain: OptionChain
@@ -41,6 +42,42 @@ class TradeBuilder(
 
   fun fourLegTrades(): List<Trade> {
     return fourLegTrades
+  }
+
+  /**
+   * Long PUT
+   * Short PUT
+   * Short CALL
+   * Long CALL
+   */
+  fun condors(): List<Trade> {
+    val puts = optionChain.puts.sortedBy { it.strike }
+    val calls = optionChain.calls.sortedBy { it.strike }
+    val maxIdx = min(puts.size, calls.size)
+
+    val putPairs = (0..maxIdx - 4).map { idx ->
+      val longPut = puts[idx]
+      (idx + 1..maxIdx - 2).map { idx2 ->
+        Pair(longPut, puts[idx2])
+      }
+    }.flatten()
+
+    val callPairs = (2..maxIdx - 1).map { idx ->
+      val longCall = calls[idx]
+      (idx + 1..maxIdx - 1).map { idx2 ->
+        Pair(longCall, calls[idx2])
+      }
+    }.flatten()
+
+    return putPairs.map { p ->
+      val longPut = p.first
+      val shortPut = p.second
+      callPairs.map { c ->
+        val shortCall = c.first
+        val longCall = c.second
+        Trade(listOf(longPut, longCall), listOf(shortPut, shortCall))
+      }
+    }.flatten().filterNot { it.sells[0].strike >= it.sells[1].strike }
   }
 
   private fun buildSpreads(

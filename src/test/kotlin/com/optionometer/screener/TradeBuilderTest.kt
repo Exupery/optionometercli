@@ -103,6 +103,30 @@ class TradeBuilderTest {
     }
   }
 
+  @Test
+  fun `verify condors are built correctly`() {
+    val builder = TradeBuilder(optionChain)
+
+    val trades = builder.condors()
+    assertFalse(trades.isEmpty())
+    trades.forEach { trade ->
+      val buys = trade.buys
+      val sells = trade.sells
+      assertFalse(buys.isEmpty())
+      assertFalse(sells.isEmpty())
+      assertEquals(2, buys.size)
+      assertEquals(2, sells.size)
+      val allLegs = buys + sells
+      assertEquals(2, allLegs.filter { it.side == Side.CALL }.size)
+      assertEquals(2, allLegs.filter { it.side == Side.PUT }.size)
+      val strikes = (buys.map { it.strike } + sells.map { it.strike }).toSet()
+      assertEquals(4, strikes.size)
+      assertTrue(buys[0].strike < sells[0].strike)
+      assertTrue(sells[0].strike < sells[1].strike)
+      assertTrue(sells[1].strike < buys[1].strike)
+    }
+  }
+
   private fun optionChain(): OptionChain {
     return OptionChain(
       "DIS",

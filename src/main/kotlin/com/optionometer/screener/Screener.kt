@@ -35,6 +35,8 @@ class Screener(
       findPotentialTradesByChain(it)
     }.map { tb ->
       val tradeTypes = numLegs.split(",")
+
+      // Multileg trades
       val scored = tradeTypes.associateWith { type ->
         when (type) {
           "2" -> Scorer.score(tb.spreads(), tb.underlyingPrice)
@@ -44,6 +46,7 @@ class Screener(
         }
       }
 
+      // Enhanced (leg only added after scoring) trades
       val enhanced = tradeTypes.map { type ->
         if (type.contains("+")) {
           val key = type.filter { it != '+' }
@@ -55,7 +58,15 @@ class Screener(
         }
       }.filter { it.isNotEmpty() }.flatten()
 
-      (scored.values.flatten() + enhanced).sortedByDescending { it.score }
+      // Names trades
+      val named = tradeTypes.map { type ->
+        when (type) {
+          "condors" -> Scorer.score(tb.condors(), tb.underlyingPrice)
+          else -> emptyList()
+        }
+      }.filter { it.isNotEmpty() }.flatten()
+
+      (scored.values.flatten() + enhanced + named).sortedByDescending { it.score }
     }
   }
 
