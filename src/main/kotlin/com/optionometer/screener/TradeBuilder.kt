@@ -8,14 +8,20 @@ class TradeBuilder(
   private val optionChain: OptionChain
 ) {
 
-  private val spreads = buildSpreads(optionChain.calls, optionChain.calls) +
-      buildSpreads(optionChain.puts, optionChain.puts) +
-      buildSpreads(optionChain.calls, optionChain.puts) +
-      buildSpreads(optionChain.puts, optionChain.calls)
+  private val spreads by lazy {
+    buildSpreads(optionChain.calls, optionChain.calls) +
+        buildSpreads(optionChain.puts, optionChain.puts) +
+        buildSpreads(optionChain.calls, optionChain.puts) +
+        buildSpreads(optionChain.puts, optionChain.calls)
+  }
 
-  private val threeLegTrades = buildThreeLegTrades(optionChain.puts + optionChain.calls)
+  private val threeLegTrades by lazy {
+    buildThreeLegTrades(optionChain.puts + optionChain.calls)
+  }
 
-  private val fourLegTrades = buildFourLegTrades()
+  private val fourLegTrades by lazy {
+    buildFourLegTrades()
+  }
 
   val underlyingPrice = optionChain.underlyingPrice
 
