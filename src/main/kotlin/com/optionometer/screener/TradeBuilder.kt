@@ -86,6 +86,25 @@ class TradeBuilder(
     }.flatten().filterNot { it.sells[0].strike >= it.sells[1].strike }
   }
 
+  /**
+   * Long PUT lower strike
+   * Short PUT higher strike
+   */
+  fun bullPutSpreads(): List<Trade> {
+    val puts = optionChain.puts.sortedBy { it.strike }
+    val maxIdx = puts.size - 1
+    val putPairs = (0..maxIdx - 1).map { idx ->
+      val longPut = puts[idx]
+      (idx + 1..maxIdx).map { idx2 ->
+        Pair(longPut, puts[idx2])
+      }
+    }.flatten()
+
+    return putPairs.map { (lowerStrike, higherStrike) ->
+      Trade(listOf(lowerStrike), listOf(higherStrike))
+    }
+  }
+
   private fun buildSpreads(
     sells: List<Option>,
     buys: List<Option>

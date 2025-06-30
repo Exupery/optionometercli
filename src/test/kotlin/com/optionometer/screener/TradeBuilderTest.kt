@@ -127,6 +127,27 @@ class TradeBuilderTest {
     }
   }
 
+  @Test
+  fun `verify bull put spreads are built correctly`() {
+    val builder = TradeBuilder(optionChain)
+
+    val trades = builder.bullPutSpreads()
+    assertFalse(trades.isEmpty())
+    trades.forEach { trade ->
+      val buys = trade.buys
+      val sells = trade.sells
+      assertFalse(buys.isEmpty())
+      assertFalse(sells.isEmpty())
+      assertEquals(1, buys.size)
+      assertEquals(1, sells.size)
+      val longOption = buys.first()
+      val shortOption = sells.first()
+      assertTrue(longOption.side == Side.PUT)
+      assertTrue(shortOption.side == Side.PUT)
+      assertTrue(longOption.strike < shortOption.strike)
+    }
+  }
+
   private fun optionChain(): OptionChain {
     return OptionChain(
       "DIS",

@@ -19,20 +19,12 @@ class Screener(
     logger.info("Screening option trades for $ticker between $minDays and $maxDays days to expiration")
     val optionChains = importer.fetchOptionChains(ticker, minDays, maxDays)
     val scoredTrades = scoreTrades(optionChains)
-    println(scoredTrades.first().first()) // TODO DELME
-  }
-
-  private fun findPotentialTradesByChain(optionChain: OptionChain): TradeBuilder {
-    val tradeBuilder = TradeBuilder(optionChain)
-    logger.info("Found ${"%,d".format(tradeBuilder.spreads().size)} spreads")
-    logger.info("Found ${"%,d".format(tradeBuilder.threeLegTrades().size)} three leg trades")
-    logger.info("Found ${"%,d".format(tradeBuilder.fourLegTrades().size)} four leg trades")
-    return tradeBuilder
+    println(scoredTrades.first().firstOrNull()) // TODO DELME
   }
 
   private fun scoreTrades(optionChains: List<OptionChain>): List<List<ScoredTrade>> {
     return optionChains.map {
-      findPotentialTradesByChain(it)
+      TradeBuilder(it)
     }.map { tb ->
       val tradeTypes = numLegs.split(",")
 
@@ -58,10 +50,11 @@ class Screener(
         }
       }.filter { it.isNotEmpty() }.flatten()
 
-      // Names trades
+      // Named trades
       val named = tradeTypes.map { type ->
         when (type) {
           "condors" -> Scorer.score(tb.condors(), tb.underlyingPrice)
+          "bullputspreads" -> Scorer.score(tb.bullPutSpreads(), tb.underlyingPrice)
           else -> emptyList()
         }
       }.filter { it.isNotEmpty() }.flatten()
