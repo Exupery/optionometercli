@@ -9,7 +9,6 @@ import kotlin.math.max
 import kotlin.math.sqrt
 
 private const val MAX_HIGH_SCORES_TO_RETURN = 100
-private const val MIN_PROFIT_AMOUNT = 0.5
 private const val NUM_STANDARD_DEVIATIONS = 2
 
 object Scorer {
@@ -18,6 +17,7 @@ object Scorer {
 
   private val minAnnualReturn: Int = System.getProperty("MIN_ANNUAL_RETURN")?.toInt() ?: 1
   private val minProbability: Int = System.getProperty("MIN_PROBABILITY")?.toInt() ?: 25
+  private val minProfitAmount: Double = System.getProperty("MIN_PROFIT_AMOUNT")?.toDouble() ?: 0.5
 
   fun score(trades: List<Trade>, underlyingPrice: Double): List<ScoredTrade> {
     logger.info("Scoring ${"%,d".format(trades.size)} trades")
@@ -41,7 +41,7 @@ object Scorer {
 
     // If trade is unprofitable (or barely profitable) at
     // all price points return early
-    if (plByPrice.all { it.value < MIN_PROFIT_AMOUNT }) {
+    if (plByPrice.all { it.value < minProfitAmount }) {
       return null
     }
 
@@ -96,7 +96,7 @@ object Scorer {
     plByPrice: Map<Int, Double>,
     sdPrices: StandardDeviationPrices
   ): Double {
-    val numProfitable = plByPrice.filter { it.value > MIN_PROFIT_AMOUNT }
+    val numProfitable = plByPrice.filter { it.value > minProfitAmount }
     val weightedByBand = numProfitable.map { (price, _) ->
       val sdBand = sdPrices.sdBand(price.toDouble())
       when (sdBand) {
@@ -115,7 +115,7 @@ object Scorer {
     standardDeviation: Double
   ): Double {
     val profitPrices = plByPrice.keys.filter { price ->
-      plByPrice[price]!! > MIN_PROFIT_AMOUNT
+      plByPrice[price]!! > minProfitAmount
     }
     val profitRanges = ranges(profitPrices)
 
@@ -173,7 +173,7 @@ object Scorer {
       max1SdProfit
     }
 
-    val (losses, profits) = plByPrice.values.partition { it < MIN_PROFIT_AMOUNT }
+    val (losses, profits) = plByPrice.values.partition { it < minProfitAmount }
     val numLossesAtMaxLoss = losses.filter { it.equivalent(max2SdLoss) }.size
     val numProfitsAtMaxProfit = profits.filter { it.equivalent(max1SdProfit) }.size
     // For score favor trades with limited downside
@@ -193,7 +193,7 @@ object Scorer {
         val multiplier = when (sdBand) {
           0, 1 -> 1.0
           2 -> {
-            if (pl < MIN_PROFIT_AMOUNT) {
+            if (pl < minProfitAmount) {
               0.3
             } else {
               0.03
@@ -205,8 +205,8 @@ object Scorer {
         multiplier * pl
       }.average()
     }
-    val profitPls = plByPrice.filter { it.value > MIN_PROFIT_AMOUNT }
-    val lossPls = plByPrice.filter { it.value <= MIN_PROFIT_AMOUNT }
+    val profitPls = plByPrice.filter { it.value > minProfitAmount }
+    val lossPls = plByPrice.filter { it.value <= minProfitAmount }
     val profitAvg = avg(profitPls)
     val lossAvg = avg(lossPls)
     val numTradesPerYear = max(365 / dte, 1)
