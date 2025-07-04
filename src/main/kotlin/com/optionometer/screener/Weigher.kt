@@ -8,6 +8,7 @@ class Weigher {
   private val maxProfitLossWeight: Int = System.getProperty("PROFIT_LOSS_WEIGHT")?.toInt() ?: 1
   private val annualReturnWeight: Int = System.getProperty("ANNUAL_RETURN_WEIGHT")?.toInt() ?: 1
   private val deltaWeight: Int = System.getProperty("DELTA_WEIGHT")?.toInt() ?: 1
+  private val hundredTradeWeight: Int = System.getProperty("HUNDRED_TRADE_WEIGHT")?.toInt() ?: 1
 
   fun scoreByWeight(
     pricePointScore: Double,
@@ -15,14 +16,16 @@ class Weigher {
     probabilityScore: Double,
     maxProfitLossScore: Double,
     annualReturnScore: Double,
-    deltaScore: Double
+    deltaScore: Double,
+    hundredTradesScore: Double
   ): Double {
     return (pricePointScore * pricePointWeight) +
         (numProfitPointScore * numProfitPointWeight) +
         (probabilityScore * probabilityWeight) +
         (maxProfitLossScore * maxProfitLossWeight) +
         (annualReturnScore * annualReturnWeight) +
-        (deltaScore * deltaWeight)
+        (deltaScore * deltaWeight) +
+        (hundredTradesScore * hundredTradeWeight)
   }
 
 }

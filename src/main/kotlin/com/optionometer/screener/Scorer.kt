@@ -58,13 +58,15 @@ object Scorer {
     val scoreByNumProfitablePoints = scoreByNumProfitablePoints(plByPrice, sdPrices)
     val maxProfitLoss = maxProfitLoss(plByPrice, sdPrices)
     val deltas = deltas(trade)
+    val hundredTradesScore = hundredTrades(plByPrice, probability)
     val score = Score(
       scoreByPricePoints,
       scoreByNumProfitablePoints,
       probability,
       maxProfitLoss.score,
       annualReturn,
-      deltas.deltaScore
+      deltas.deltaScore,
+      hundredTradesScore
     )
 
     return RawScoredTrade(score, plByPrice, sdPrices, maxProfitLoss, deltas.tradeDelta, trade)
@@ -216,6 +218,33 @@ object Scorer {
     return profit + loss
   }
 
+  private fun hundredTrades(
+    plByPrice: Map<Int, Double>,
+    probability: Double
+  ): Int {
+    val maxProfit = plByPrice.values.max()
+    val numMaxProfit = plByPrice.values.filter { it.equivalent(maxProfit) }.size
+    val numProfitable = plByPrice.values.filter { it > minProfitAmount }.size
+    val targetProfit = if (numMaxProfit > (numProfitable / 2)) {
+      maxProfit
+    } else {
+      plByPrice.values.filter { it > minProfitAmount }.average()
+    }
+    val maxLoss = plByPrice.values.min()
+    val numMaxLoss = plByPrice.values.filter { it.equivalent(maxLoss) }.size
+    val numLosses = plByPrice.values.filter { it < 0 }.size
+    val typicalLoss = if (numMaxLoss > (numLosses / 2)) {
+      maxLoss
+    } else {
+      plByPrice.values.filter { it < minProfitAmount }.average()
+    }
+    val numLosingTrades = 100 - probability.toInt()
+    val losses = numLosingTrades * typicalLoss
+    val wins = probability.toInt() * targetProfit
+
+    return ((losses + wins) * 100).toInt()
+  }
+
   private fun deltas(
     trade: Trade
   ): Deltas {
@@ -233,7 +262,8 @@ data class Score(
   val scoreByProbability: Double,
   val maxLossRatio: Double,
   val annualizedReturn: Double,
-  val deltaScore: Double
+  val deltaScore: Double,
+  val hundredTradesScore: Int
 )
 
 data class RawScoredTrade(
@@ -253,6 +283,7 @@ data class ScoredTrade(
   val maxProfitLoss: MaxProfitLoss,
   val annualizedReturn: Double,
   val tradeDelta: Double,
+  val hundredTrades: Int,
   val trade: Trade
 )
 

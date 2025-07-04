@@ -58,6 +58,7 @@ class MarketDataImporter(
 
     val optionChainResponse = mapper.readValue(response.body?.string(), OptionChainResponse::class.java)
 
+    // TODO OPTIONALLY LIMIT TO FRIDAY EXPIRES ONLY
     val numFound = optionChainResponse.underlyingPrice.size
     val nearest = Instant.ofEpochSecond(optionChainResponse.expiration.min())
     val farthest = Instant.ofEpochSecond(optionChainResponse.expiration.max())

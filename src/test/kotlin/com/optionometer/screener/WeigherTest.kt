@@ -10,6 +10,8 @@ import org.junit.jupiter.params.provider.ValueSource
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class WeigherTest {
 
+  private val baseScore = 60.0
+
   @BeforeEach
   fun setup() {
     System.setProperty("PRICE_POINT_WEIGHT", "1")
@@ -18,12 +20,13 @@ class WeigherTest {
     System.setProperty("PROFIT_LOSS_WEIGHT", "1")
     System.setProperty("ANNUAL_RETURN_WEIGHT", "1")
     System.setProperty("DELTA_WEIGHT", "1")
+    System.setProperty("HUNDRED_TRADE_WEIGHT", "1")
   }
 
   @Test
   fun `zero scores are gracefully handled`() {
     val weigher = Weigher()
-    val actual = weigher.scoreByWeight(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    val actual = weigher.scoreByWeight(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
     assertEquals(0.0, actual, 0.01)
   }
 
@@ -35,8 +38,9 @@ class WeigherTest {
     System.setProperty("PROFIT_LOSS_WEIGHT", "0")
     System.setProperty("ANNUAL_RETURN_WEIGHT", "0")
     System.setProperty("DELTA_WEIGHT", "0")
+    System.setProperty("HUNDRED_TRADE_WEIGHT", "0")
     val weigher = Weigher()
-    val actual = weigher.scoreByWeight(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+    val actual = weigher.scoreByWeight(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
     assertEquals(0.0, actual, 0.01)
   }
 
@@ -47,8 +51,8 @@ class WeigherTest {
   ) {
     System.setProperty("PRICE_POINT_WEIGHT", weight.toString())
     val weigher = Weigher()
-    val expected = 50.0 + (10 * weight)
-    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
+    val expected = baseScore + (10 * weight)
+    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
     assertEquals(expected, actual, 0.1)
   }
 
@@ -59,8 +63,8 @@ class WeigherTest {
   ) {
     System.setProperty("PROFIT_POINT_WEIGHT", weight.toString())
     val weigher = Weigher()
-    val expected = 50.0 + (10 * weight)
-    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
+    val expected = baseScore + (10 * weight)
+    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
     assertEquals(expected, actual, 0.1)
   }
 
@@ -71,8 +75,8 @@ class WeigherTest {
   ) {
     System.setProperty("PROBABILITY_WEIGHT", weight.toString())
     val weigher = Weigher()
-    val expected = 50.0 + (10 * weight)
-    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
+    val expected = baseScore + (10 * weight)
+    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
     assertEquals(expected, actual, 0.1)
   }
 
@@ -83,8 +87,8 @@ class WeigherTest {
   ) {
     System.setProperty("PROFIT_LOSS_WEIGHT", weight.toString())
     val weigher = Weigher()
-    val expected = 50.0 + (10 * weight)
-    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
+    val expected = baseScore + (10 * weight)
+    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
     assertEquals(expected, actual, 0.1)
   }
 
@@ -95,8 +99,8 @@ class WeigherTest {
   ) {
     System.setProperty("ANNUAL_RETURN_WEIGHT", weight.toString())
     val weigher = Weigher()
-    val expected = 50.0 + (10 * weight)
-    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
+    val expected = baseScore + (10 * weight)
+    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
     assertEquals(expected, actual, 0.1)
   }
 
@@ -107,8 +111,20 @@ class WeigherTest {
   ) {
     System.setProperty("DELTA_WEIGHT", weight.toString())
     val weigher = Weigher()
-    val expected = 50.0 + (10 * weight)
-    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
+    val expected = baseScore + (10 * weight)
+    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
+    assertEquals(expected, actual, 0.1)
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = [0, 1, 2, 5, 10, 47, 100])
+  fun `hundred trades score is properly weighted`(
+    weight: Int
+  ) {
+    System.setProperty("HUNDRED_TRADE_WEIGHT", weight.toString())
+    val weigher = Weigher()
+    val expected = baseScore + (10 * weight)
+    val actual = weigher.scoreByWeight(10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0)
     assertEquals(expected, actual, 0.1)
   }
 

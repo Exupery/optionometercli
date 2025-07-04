@@ -35,7 +35,7 @@ class NormalizerTest {
     expected: List<Int>
   ) {
     val rawScoredTrades = plByPriceScores.map { plByPriceScore ->
-      rawScoredTrade(plByPriceScore, 0.0, 0.0, 0.0, 0.0, 0.0)
+      rawScoredTrade(plByPriceScore = plByPriceScore)
     }
 
     verify(rawScoredTrades, expected)
@@ -48,7 +48,7 @@ class NormalizerTest {
     expected: List<Int>
   ) {
     val rawScoredTrades = numProfitablePointsScores.map { numProfitablePointsScore ->
-      rawScoredTrade(0.0, numProfitablePointsScore, 0.0, 0.0, 0.0, 0.0)
+      rawScoredTrade(numProfitablePointsScore = numProfitablePointsScore)
     }
 
     verify(rawScoredTrades, expected)
@@ -61,7 +61,7 @@ class NormalizerTest {
     expected: List<Int>
   ) {
     val rawScoredTrades = probabilityScores.map { probabilityScore ->
-      rawScoredTrade(0.0, 0.0, probabilityScore, 0.0, 0.0, 0.0)
+      rawScoredTrade(probabilityScore = probabilityScore)
     }
 
     verify(rawScoredTrades, expected)
@@ -74,7 +74,7 @@ class NormalizerTest {
     expected: List<Int>
   ) {
     val rawScoredTrades = maxProfitLossScores.map { maxProfitLossScore ->
-      rawScoredTrade(0.0, 0.0, 0.0, maxProfitLossScore, 0.0, 0.0)
+      rawScoredTrade(maxProfitToMaxLossRatio = maxProfitLossScore)
     }
 
     verify(rawScoredTrades, expected)
@@ -87,7 +87,7 @@ class NormalizerTest {
     expected: List<Int>
   ) {
     val rawScoredTrades = annualizedReturns.map { annualizedReturn ->
-      rawScoredTrade(0.0, 0.0, 0.0, 0.0, annualizedReturn, 0.0)
+      rawScoredTrade(annualizedReturn = annualizedReturn)
     }
 
     verify(rawScoredTrades, expected)
@@ -100,7 +100,20 @@ class NormalizerTest {
     expected: List<Int>
   ) {
     val rawScoredTrades = deltas.map { delta ->
-      rawScoredTrade(0.0, 0.0, 0.0, 0.0, 0.0, delta)
+      rawScoredTrade(delta = delta)
+    }
+
+    verify(rawScoredTrades, expected)
+  }
+
+  @ParameterizedTest
+  @MethodSource("scores")
+  fun `verify normalize scores by hundred trades`(
+    hundredTradesScores: List<Double>,
+    expected: List<Int>
+  ) {
+    val rawScoredTrades = hundredTradesScores.map { hundredTradeScore ->
+      rawScoredTrade(hundredTradesScore = (hundredTradeScore * 100).toInt())
     }
 
     verify(rawScoredTrades, expected)
@@ -132,12 +145,13 @@ class NormalizerTest {
   }
 
   private fun rawScoredTrade(
-    plByPriceScore: Double,
-    numProfitablePointsScore: Double,
-    probabilityScore: Double,
-    maxProfitToMaxLossRatio: Double,
-    annualizedReturn: Double,
-    delta: Double
+    plByPriceScore: Double = 0.0,
+    numProfitablePointsScore: Double = 0.0,
+    probabilityScore: Double = 0.0,
+    maxProfitToMaxLossRatio: Double = 0.0,
+    annualizedReturn: Double = 0.0,
+    delta: Double = 0.0,
+    hundredTradesScore: Int = 0
   ): RawScoredTrade {
     val score = Score(
       plByPriceScore,
@@ -145,7 +159,8 @@ class NormalizerTest {
       probabilityScore,
       maxProfitToMaxLossRatio,
       annualizedReturn,
-      delta
+      delta,
+      hundredTradesScore
     )
     val option = mockk<Option>(relaxed = true)
     every { option.symbol } returns UUID.randomUUID().toString()

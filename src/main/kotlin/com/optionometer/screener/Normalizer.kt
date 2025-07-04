@@ -18,6 +18,10 @@ object Normalizer {
     val maxProfitLossScores = normalize(cohort.map { (id, rst) -> id to rst.score.maxLossRatio })
     val annualReturnScores = normalize(cohort.map { (id, rst) -> id to rst.score.annualizedReturn })
     val deltaScores = normalize(cohort.map { (id, rst) -> id to rst.score.deltaScore })
+    val hundredTradesScores = normalize(
+      cohort.map { (id, rst) -> id to rst.score.hundredTradesScore.toDouble() },
+      (System.getProperty("HUNDRED_TRADE_WEIGHT")?.toInt() ?: -1) <= 1
+    )
 
     return cohort.map { (id, rst) ->
       val score = weigher.scoreByWeight(
@@ -26,19 +30,23 @@ object Normalizer {
         probabilityScores.getOrDefault(id, 0.0),
         maxProfitLossScores.getOrDefault(id, 0.0),
         annualReturnScores.getOrDefault(id, 0.0),
-        deltaScores.getOrDefault(id, 0.0)
+        deltaScores.getOrDefault(id, 0.0),
+        hundredTradesScores.getOrDefault(id, 0.0)
       )
       scoredTradeFromRawScoredTrade(score.toInt(), rst)
     }
   }
 
-  private fun normalize(rawScores: List<Pair<String, Double>>): Map<String, Double> {
+  private fun normalize(
+    rawScores: List<Pair<String, Double>>,
+    ignoreNegativeScores: Boolean = true
+  ): Map<String, Double> {
     val cohortSize = rawScores.size
     val interval = 100.0 / (cohortSize - 1)
     val sorted = rawScores.sortedBy { it.second }
     return sorted.withIndex().associate { indexedValue ->
       // Only use actual percentile for positive non-zero scores
-      val percentile = if (indexedValue.value.second <= 0.0) {
+      val percentile = if (ignoreNegativeScores && indexedValue.value.second <= 0.0) {
         0.0
       } else {
         indexedValue.index * interval
@@ -56,6 +64,7 @@ object Normalizer {
       raw.maxProfitLoss,
       raw.score.annualizedReturn,
       raw.tradeDelta,
+      raw.score.hundredTradesScore,
       raw.trade
     )
   }
