@@ -10,7 +10,9 @@ import okhttp3.Request
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
+import java.time.DayOfWeek
 import java.time.Instant
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 private const val OPTION_CHAIN_PATH = "/v1/options/chain"
@@ -26,6 +28,9 @@ class MarketDataImporter(
 
   @Value("\${marketdata.maxStrikes}")
   private val maxStrikes: Int = 10
+
+  @Value("\${marketdata.fridayOnly}")
+  private val fridayOnly: Boolean = false
 
   private val client = OkHttpClient()
   private val apiToken = this.javaClass.getResourceAsStream("/.marketdataapitoken")
@@ -58,7 +63,6 @@ class MarketDataImporter(
 
     val optionChainResponse = mapper.readValue(response.body?.string(), OptionChainResponse::class.java)
 
-    // TODO OPTIONALLY LIMIT TO FRIDAY EXPIRES ONLY
     val numFound = optionChainResponse.underlyingPrice.size
     val nearest = Instant.ofEpochSecond(optionChainResponse.expiration.min())
     val farthest = Instant.ofEpochSecond(optionChainResponse.expiration.max())
@@ -96,12 +100,22 @@ class MarketDataImporter(
 
     val underlyingPrice = optionChainResponse.underlyingPrice.firstOrNull() ?: return emptyList()
     val byExpiry = options.groupBy { it.expiry }
-    return byExpiry.map { (expiry, bar) ->
+    return if (fridayOnly) {
+      byExpiry.filter { expiresOnFriday(it.key) }
+    } else {
+      byExpiry
+    }.map { (expiry, bar) ->
       val bySide = bar.groupBy { it.side }
       val calls = bySide[Side.CALL]?.sortedBy { it.strike } ?: emptyList()
       val puts = bySide[Side.PUT]?.sortedBy { it.strike } ?: emptyList()
       val expires = Instant.ofEpochSecond(expiry)
       OptionChain(ticker, underlyingPrice, expires, calls, puts)
     }.sortedBy { it.expiry }
+  }
+
+  private fun expiresOnFriday(expires: Long): Boolean {
+    val instant = Instant.ofEpochSecond(expires)
+    val dayOfWeek = instant.atZone(ZoneId.of("UTC")).dayOfWeek
+    return dayOfWeek == DayOfWeek.FRIDAY
   }
 }

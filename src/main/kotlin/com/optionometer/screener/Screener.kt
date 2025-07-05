@@ -16,6 +16,10 @@ class Screener(
   private val logger = LoggerFactory.getLogger(javaClass)
 
   fun screen(ticker: String) {
+    if (minDays >= maxDays) {
+      logger.error("Minimum days to expiration ($minDays) must be less than max days ($maxDays)")
+      return
+    }
     logger.info("Screening option trades for $ticker between $minDays and $maxDays days to expiration")
     val optionChains = importer.fetchOptionChains(ticker, minDays, maxDays)
     if (optionChains.isEmpty()) {
