@@ -1,6 +1,7 @@
 package com.optionometer.screener
 
 import com.optionometer.models.OptionChain
+import com.optionometer.output.CsvWriter
 import com.optionometer.quotes.Importer
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -10,7 +11,8 @@ class Screener(
   private val importer: Importer,
   private val minDays: Int,
   private val maxDays: Int,
-  private val numLegs: String
+  private val numLegs: String,
+  private val csvWriter: CsvWriter
 ) {
 
   private val logger = LoggerFactory.getLogger(javaClass)
@@ -27,7 +29,15 @@ class Screener(
       return
     }
     val scoredTrades = scoreTrades(optionChains)
-    println(scoredTrades.first().firstOrNull()) // TODO DELME
+    if (scoredTrades.isEmpty() || scoredTrades.all { it.isEmpty() }) {
+      logger.warn("No trades found with a positive score for selected criteria")
+      return
+    }
+    csvWriter.write(ticker, scoredTrades)
+    logger.info("Highest score trade for each expiry:")
+    scoredTrades.forEach {
+      logger.info(it.firstOrNull().toString())
+    }
   }
 
   private fun scoreTrades(optionChains: List<OptionChain>): List<List<ScoredTrade>> {

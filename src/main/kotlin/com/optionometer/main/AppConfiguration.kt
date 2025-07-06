@@ -3,6 +3,7 @@ package com.optionometer.main
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.optionometer.output.CsvWriter
 import com.optionometer.quotes.Importer
 import com.optionometer.quotes.marketdata.MarketDataImporter
 import com.optionometer.screener.Screener
@@ -29,13 +30,19 @@ class AppConfiguration {
   }
 
   @Bean
+  fun csvWriter(): CsvWriter {
+    return CsvWriter()
+  }
+
+  @Bean
   fun screener(
     importer: Importer,
+    csvWriter: CsvWriter,
     @Value("\${screener.expiration.minDays}") minDays: Int,
     @Value("\${screener.expiration.maxDays}") maxDays: Int,
     @Value("\${screener.numLegs}") numLegs: String
   ): Screener {
-    return Screener(importer, minDays, maxDays, numLegs)
+    return Screener(importer, minDays, maxDays, numLegs, csvWriter)
   }
 
 }

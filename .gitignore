@@ -50,3 +50,4 @@ out/
 !**/src/test/**/out/
 
 .marketdataapitoken
+*.csv
