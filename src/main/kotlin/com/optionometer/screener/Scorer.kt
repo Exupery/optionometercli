@@ -50,7 +50,7 @@ object Scorer {
       return null
     }
     val dte = (trade.sells + trade.buys).first().dte
-    val annualReturn = annualReturnScore(dte, probability, plByPrice, sdPrices)
+    val annualReturn = annualReturnScore(dte, probability, plByPrice, sdPrices, trade)
     if (annualReturn < minAnnualReturn) {
       return null
     }
@@ -187,7 +187,8 @@ object Scorer {
     dte: Int,
     probability: Double,
     plByPrice: Map<Int, Double>,
-    sdPrices: StandardDeviationPrices
+    sdPrices: StandardDeviationPrices,
+    trade: Trade
   ): Double {
     val avg = { pls: Map<Int, Double> ->
       pls.map { (price, pl) ->
@@ -196,9 +197,10 @@ object Scorer {
           0, 1 -> 1.0
           2 -> {
             if (pl < minProfitAmount) {
-              0.3
+              1.0
             } else {
-              0.03
+              // Discount trades that require a large move to become profitable
+              0.5
             }
           }
 
@@ -211,11 +213,11 @@ object Scorer {
     val lossPls = plByPrice.filter { it.value <= minProfitAmount }
     val profitAvg = avg(profitPls)
     val lossAvg = avg(lossPls)
-    val numTradesPerYear = max(365 / dte, 1)
+    val numTradesPerYear = max(365 / max(dte, 7), 1)
     val profit = numTradesPerYear * (probability / 100) * profitAvg
     val loss = numTradesPerYear * ((100 - probability) / 100) * lossAvg
     // Add because loss is negative
-    return profit + loss
+    return (((profit + loss) * 100) / trade.requiredMargin()) * 100
   }
 
   private fun hundredTrades(

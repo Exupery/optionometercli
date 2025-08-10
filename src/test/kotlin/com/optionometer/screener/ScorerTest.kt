@@ -34,6 +34,8 @@ class ScorerTest {
     every { put.delta } returns -0.4
     every { smallProfit.buys } returns listOf(put)
     every { smallProfit.sells } returns emptyList()
+    every { smallProfit.requiredMargin() } returns underlyingPrice * 100
+    every { largeProfit.requiredMargin() } returns underlyingPrice * 100
     every { smallProfit.profitLossAtPrice(any()) } answers {
       val price = firstArg<Double>()
       if (price < underlyingPrice) {

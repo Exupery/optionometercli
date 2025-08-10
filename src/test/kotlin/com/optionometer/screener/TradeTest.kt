@@ -26,6 +26,48 @@ class TradeTest {
     assertEquals(0.00, profit, 0.01)
   }
 
+  @ParameterizedTest
+  @MethodSource("requiredMargins")
+  fun `verify requiredMargin is calculated correctly`(
+    buys: List<Option>,
+    sells: List<Option>,
+    expected: Double
+  ) {
+    val trade = Trade(buys, sells)
+    val actual = trade.requiredMargin()
+    assertEquals(expected * 100, actual, 0.1)
+  }
+
+  @SuppressWarnings
+  private fun requiredMargins(): Stream<Arguments> {
+    val call110 = call(110.0, 6.0, 7.0)
+    val call115 = call(115.0, 4.0, 5.0)
+    val call120 = call(120.0, 2.0, 3.0)
+    val call125 = call(125.0, 0.5, 1.0)
+    val put110 = put(110.0, 2.0, 3.0)
+    val put115 = put(115.0, 4.0, 5.0)
+    val put120 = put(120.0, 6.0, 7.0)
+    val put125 = put(125.0, 8.0, 9.0)
+    return Stream.of(
+      Arguments.of(listOf(call110), emptyList<Option>(), 7.0),
+      Arguments.of(listOf(call110, call115), emptyList<Option>(), 12.0),
+      Arguments.of(listOf(call115, call120, call125), emptyList<Option>(), 9.0),
+      Arguments.of(emptyList<Option>(), listOf(put110), 110 - 2.0),
+      Arguments.of(emptyList<Option>(), listOf(put110, put115), (110 - 2) + (115 - 4)),
+      Arguments.of(listOf(call110), listOf(put115), (115 - 4) + 7),
+      Arguments.of(listOf(call115), listOf(put110), (110 - 2) + 5),
+      Arguments.of(listOf(put120), listOf(put125), 4),
+      Arguments.of(listOf(put115), listOf(put125), 7),
+      Arguments.of(listOf(put125), listOf(put120), 3),
+      Arguments.of(listOf(put125), listOf(put115), 5),
+      Arguments.of(listOf(call115), listOf(call120), 3),
+      Arguments.of(listOf(call115), listOf(call120, put125), 117 + 3),
+      Arguments.of(listOf(call115), listOf(call120, call125), 124.5 + 3),
+      Arguments.of(listOf(put110, call125), listOf(put115, call120), 8),
+      Arguments.of(listOf(put115, call120), listOf(put110, call125), 5.5)
+    )
+  }
+
   /* *********************
    * SINGLE LEG STRATEGIES
    ********************* */
