@@ -179,7 +179,7 @@ object Scorer {
     val numLossesAtMaxLoss = losses.filter { it.equivalent(max2SdLoss) }.size
     val numProfitsAtMaxProfit = profits.filter { it.equivalent(max1SdProfit) }.size
     // For score favor trades with limited downside
-    val score = numLossesAtMaxLoss.toDouble() / losses.size
+    val score = max(numLossesAtMaxLoss, 1).toDouble() / max(losses.size, 1)
     return MaxProfitLoss(ratio, numProfitsAtMaxProfit, max1SdProfit, numLossesAtMaxLoss, max2SdLoss, score)
   }
 
@@ -214,8 +214,8 @@ object Scorer {
     val profitAvg = avg(profitPls)
     val lossAvg = avg(lossPls)
     val numTradesPerYear = max(365 / max(dte, 7), 1)
-    val profit = numTradesPerYear * (probability / 100) * profitAvg
-    val loss = numTradesPerYear * ((100 - probability) / 100) * lossAvg
+    val profit = numTradesPerYear * (probability / 100) * (profitAvg.takeIf { !it.isNaN() } ?: 0.0)
+    val loss = numTradesPerYear * ((100 - probability) / 100) * (lossAvg.takeIf { !it.isNaN() } ?: 0.0)
     // Add because loss is negative
     return (((profit + loss) * 100) / trade.requiredMargin()) * 100
   }
