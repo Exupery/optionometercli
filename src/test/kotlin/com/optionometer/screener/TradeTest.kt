@@ -1,8 +1,11 @@
 package com.optionometer.screener
 
+import com.optionometer.main.Properties
 import com.optionometer.models.Option
 import com.optionometer.utils.call
 import com.optionometer.utils.put
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
@@ -14,6 +17,11 @@ import kotlin.test.assertEquals
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TradeTest {
+
+  @BeforeEach
+  fun setup() {
+    Properties.commissionPerShare = 0.0
+  }
 
   @Test
   fun `verify no options in trade returns zero profit`() {
@@ -65,6 +73,28 @@ class TradeTest {
       Arguments.of(listOf(call115), listOf(call120, call125), 124.5 + 3),
       Arguments.of(listOf(put110, call125), listOf(put115, call120), 8),
       Arguments.of(listOf(put115, call120), listOf(put110, call125), 5.5)
+    )
+  }
+
+  @ParameterizedTest
+  @MethodSource("zeroBidAskTrades")
+  fun `verify commission is calculated`(trade: Trade) {
+    Properties.commissionPerShare = 1.0
+
+    val profit = trade.profitLossAtPrice(10.00)
+    // Using zero bid/ask profit at strike should be a loss that matches commission
+    assertTrue(profit < 0)
+    val expected = Properties.commissionPerShare * -1
+    assertEquals(expected, profit, 0.001)
+  }
+
+  @SuppressWarnings
+  private fun zeroBidAskTrades(): Stream<Arguments> {
+    return Stream.of(
+      Arguments.of(Trade(listOf(call(10.0, 0.0, 0.0)), emptyList())),
+      Arguments.of(Trade(emptyList(), listOf(call(10.0, 0.0, 0.0)))),
+      Arguments.of(Trade(listOf(put(10.0, 0.0, 0.0)), emptyList())),
+      Arguments.of(Trade(emptyList(), listOf(put(10.0, 0.0, 0.0))))
     )
   }
 

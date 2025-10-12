@@ -1,5 +1,6 @@
 package com.optionometer.screener
 
+import com.optionometer.main.Properties
 import com.optionometer.models.Option
 import com.optionometer.models.Side
 import kotlin.math.abs
@@ -25,41 +26,43 @@ class Trade(
   }
 
   private fun callBuyPl(call: Option, target: Double): Double {
+    val askPlusCommission = call.ask + Properties.commissionPerShare
     return if (call.strike > target) {
-      call.ask * -1
+      askPlusCommission * -1
     } else {
-      target - call.strike - call.ask
+      target - call.strike - askPlusCommission
     }
   }
 
   private fun callSellPl(call: Option, target: Double): Double {
+    val bidMinusCommission = call.bid - Properties.commissionPerShare
     return if (call.strike > target) {
-      call.bid
+      bidMinusCommission
     } else {
-      ((target - call.strike) * -1) + call.bid
+      ((target - call.strike) * -1) + bidMinusCommission
     }
   }
 
   private fun putBuyPl(put: Option, target: Double): Double {
+    val askPlusCommission = put.ask + Properties.commissionPerShare
     return if (put.strike < target) {
-      put.ask * -1
+      askPlusCommission * -1
     } else {
-      put.strike - target - put.ask
+      put.strike - target - askPlusCommission
     }
   }
 
   private fun putSellPl(put: Option, target: Double): Double {
+    val bidMinusCommission = put.bid - Properties.commissionPerShare
     return if (put.strike < target) {
-      put.bid
+      bidMinusCommission
     } else {
-      ((put.strike - target) * -1) + put.bid
+      ((put.strike - target) * -1) + bidMinusCommission
     }
   }
 
   fun requiredMargin(): Double {
-    val (longCalls, longPuts) = buys.partition { it.side == Side.CALL }
-    val (shortCalls, shortPuts) = sells.partition { it.side == Side.CALL }
-    return calculateMargin(longCalls, shortCalls) + calculateMargin(longPuts, shortPuts)
+    return calculateMargin(callBuys, callSells) + calculateMargin(putBuys, putSells)
   }
 
   private fun calculateMargin(
