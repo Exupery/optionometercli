@@ -1,5 +1,7 @@
 package com.optionometer.screener
 
+import com.optionometer.screener.scorers.RawScoredTrade
+import com.optionometer.screener.scorers.ScoredTrade
 import org.slf4j.LoggerFactory
 import java.util.UUID
 

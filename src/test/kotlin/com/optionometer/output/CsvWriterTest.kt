@@ -2,8 +2,8 @@ package com.optionometer.output
 
 import com.optionometer.models.Option
 import com.optionometer.models.Side
-import com.optionometer.screener.ScoredTrade
 import com.optionometer.screener.Trade
+import com.optionometer.screener.scorers.ScoredTrade
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertTrue

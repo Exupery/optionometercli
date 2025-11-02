@@ -1,7 +1,7 @@
 package com.optionometer.output
 
-import com.optionometer.screener.ScoredTrade
 import com.optionometer.screener.Trade
+import com.optionometer.screener.scorers.ScoredTrade
 import org.apache.commons.csv.CSVFormat
 import org.slf4j.LoggerFactory
 import java.io.File

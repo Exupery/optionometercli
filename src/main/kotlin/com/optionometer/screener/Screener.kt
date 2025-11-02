@@ -3,6 +3,8 @@ package com.optionometer.screener
 import com.optionometer.models.OptionChain
 import com.optionometer.output.CsvWriter
 import com.optionometer.quotes.Importer
+import com.optionometer.screener.scorers.ScoredTrade
+import com.optionometer.screener.scorers.StrategyOptimizerScorer
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -17,7 +19,10 @@ class Screener(
 
   private val logger = LoggerFactory.getLogger(javaClass)
 
-  fun screen(ticker: String) {
+  fun screen(
+    ticker: String,
+    screenerMode: Mode
+  ) {
     if (minDays >= maxDays) {
       logger.error("Minimum days to expiration ($minDays) must be less than max days ($maxDays)")
       return
@@ -28,6 +33,12 @@ class Screener(
       logger.warn("No options matching criteria")
       return
     }
+
+    when (screenerMode) {
+      Mode.STRATEGY_OPTIMIZER -> ""
+      Mode.BULL_PUT_SPREAD_SCREENER -> ""
+    }
+
     val scoredTrades = scoreTrades(optionChains)
     if (scoredTrades.isEmpty() || scoredTrades.all { it.isEmpty() }) {
       logger.warn("No trades found with a positive score for selected criteria")
@@ -44,14 +55,15 @@ class Screener(
     return optionChains.map {
       TradeBuilder(it)
     }.map { tb ->
+      val scorer = StrategyOptimizerScorer()
       val tradeTypes = numLegs.split(",")
 
       // Multileg trades
       val scored = tradeTypes.associateWith { type ->
         when (type) {
-          "2" -> Scorer.score(tb.spreads(), tb.underlyingPrice)
-          "3" -> Scorer.score(tb.threeLegTrades(), tb.underlyingPrice)
-          "4" -> Scorer.score(tb.fourLegTrades(), tb.underlyingPrice)
+          "2" -> scorer.score(tb.spreads(), tb.underlyingPrice)
+          "3" -> scorer.score(tb.threeLegTrades(), tb.underlyingPrice)
+          "4" -> scorer.score(tb.fourLegTrades(), tb.underlyingPrice)
           else -> emptyList()
         }
       }
@@ -62,7 +74,7 @@ class Screener(
           val key = type.filter { it != '+' }
           val scoredTrades = scored.getOrDefault(key, emptyList()).map { it.trade }
           val enhancedTrades = tb.enhancedTrades(scoredTrades)
-          Scorer.score(enhancedTrades, tb.underlyingPrice)
+          scorer.score(enhancedTrades, tb.underlyingPrice)
         } else {
           emptyList()
         }
@@ -71,8 +83,8 @@ class Screener(
       // Named trades
       val named = tradeTypes.map { type ->
         when (type) {
-          "condors" -> Scorer.score(tb.condors(), tb.underlyingPrice)
-          "bullputspreads" -> Scorer.score(tb.bullPutSpreads(), tb.underlyingPrice)
+          "condors" -> scorer.score(tb.condors(), tb.underlyingPrice)
+          "bullputspreads" -> scorer.score(tb.bullPutSpreads(), tb.underlyingPrice)
           else -> emptyList()
         }
       }.filter { it.isNotEmpty() }.flatten()
@@ -81,4 +93,9 @@ class Screener(
     }
   }
 
+}
+
+enum class Mode {
+  STRATEGY_OPTIMIZER,
+  BULL_PUT_SPREAD_SCREENER
 }

@@ -1,5 +1,6 @@
 package com.optionometer.screener
 
+import com.optionometer.screener.scorers.StandardDeviationPrices
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments

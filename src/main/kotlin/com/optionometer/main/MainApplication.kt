@@ -1,5 +1,6 @@
 package com.optionometer.main
 
+import com.optionometer.screener.Mode
 import com.optionometer.screener.Screener
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -27,8 +28,16 @@ class MainApplication(@Autowired val screener: Screener) : CommandLineRunner {
     } else {
       DEFAULT_TICKER
     }
-    logger.info("Optionometer started with ticker $ticker")
-    screener.screen(ticker)
+
+    val arg2 = args.getOrNull(1)
+    val screenerMode = if (arg2 != null) {
+      Mode.valueOf(arg2)
+    } else {
+      Mode.STRATEGY_OPTIMIZER
+    }
+
+    logger.info("Optionometer started with ticker $ticker in mode $screenerMode")
+    screener.screen(ticker, screenerMode)
     val duration = Duration.between(start, Instant.now())
     val durStr = "${duration.toMinutesPart()}m ${duration.toSecondsPart()}s"
     logger.info("Optionometer complete for $ticker after $durStr")

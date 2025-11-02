@@ -1,6 +1,7 @@
-package com.optionometer.screener
+package com.optionometer.screener.scorers
 
 import com.optionometer.models.Option
+import com.optionometer.screener.Trade
 import com.optionometer.utils.call
 import io.mockk.every
 import io.mockk.mockk
@@ -16,13 +17,15 @@ import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.jvm.isAccessible
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class ScorerTest {
+class StrategyOptimizerScorerTest {
 
   private val underlyingPrice = 100.0
   private val call = mockk<Option>()
   private val put = mockk<Option>()
   private val smallProfit = mockk<Trade>()
   private val largeProfit = mockk<Trade>()
+
+  private val scorer = StrategyOptimizerScorer()
 
   @BeforeEach
   fun setup() {
@@ -39,9 +42,9 @@ class ScorerTest {
     every { smallProfit.profitLossAtPrice(any()) } answers {
       val price = firstArg<Double>()
       if (price < underlyingPrice) {
-        Random.nextDouble(-10.0, 5.0)
+        Random.Default.nextDouble(-10.0, 5.0)
       } else {
-        Random.nextDouble(1.0, 10.0)
+        Random.Default.nextDouble(1.0, 10.0)
       }
     }
     every { smallProfit.profitLossAtPrice(underlyingPrice) } returns 100.0
@@ -59,7 +62,7 @@ class ScorerTest {
 
   @Test
   fun `empty list is gracefully handled`() {
-    val scored = Scorer.score(emptyList(), 0.0)
+    val scored = scorer.score(emptyList(), 0.0)
     assertTrue(scored.isEmpty())
   }
 
@@ -136,8 +139,8 @@ class ScorerTest {
 
   private fun callPrivateScore(trade: Trade): RawScoredTrade? {
     return Scorer::class.declaredFunctions
-      .first { it.name == "score" && it.visibility == KVisibility.PRIVATE }
+      .first { it.name == "score" && it.visibility == KVisibility.PROTECTED }
       .apply { isAccessible = true }
-      .call(Scorer, trade, underlyingPrice) as RawScoredTrade?
+      .call(scorer, trade, underlyingPrice) as RawScoredTrade?
   }
 }

@@ -1,6 +1,10 @@
 package com.optionometer.screener
 
 import com.optionometer.models.Option
+import com.optionometer.screener.scorers.MaxProfitLoss
+import com.optionometer.screener.scorers.RawScoredTrade
+import com.optionometer.screener.scorers.Score
+import com.optionometer.screener.scorers.StandardDeviationPrices
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

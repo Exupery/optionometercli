@@ -1,7 +1,8 @@
-package com.optionometer.screener
+package com.optionometer.screener.scorers
 
 import com.optionometer.models.Option
 import com.optionometer.screener.Normalizer.normalize
+import com.optionometer.screener.Trade
 import org.apache.commons.statistics.distribution.NormalDistribution
 import org.slf4j.LoggerFactory
 import kotlin.math.abs
@@ -11,13 +12,13 @@ import kotlin.math.sqrt
 private const val MAX_HIGH_SCORES_TO_RETURN = 100
 private const val NUM_STANDARD_DEVIATIONS = 2
 
-object Scorer {
+abstract class Scorer {
 
   private val logger = LoggerFactory.getLogger(javaClass)
 
-  private val minAnnualReturn: Int = System.getProperty("MIN_ANNUAL_RETURN")?.toInt() ?: 1
-  private val minProbability: Int = System.getProperty("MIN_PROBABILITY")?.toInt() ?: 25
-  private val minProfitAmount: Double = System.getProperty("MIN_PROFIT_AMOUNT")?.toDouble() ?: 0.5
+  protected val minAnnualReturn: Int = System.getProperty("MIN_ANNUAL_RETURN")?.toInt() ?: 1
+  protected val minProbability: Int = System.getProperty("MIN_PROBABILITY")?.toInt() ?: 25
+  protected val minProfitAmount: Double = System.getProperty("MIN_PROFIT_AMOUNT")?.toDouble() ?: 0.5
 
   fun score(trades: List<Trade>, underlyingPrice: Double): List<ScoredTrade> {
     logger.info("Scoring ${"%,d".format(trades.size)} trades")
@@ -32,86 +33,14 @@ object Scorer {
     }.take(MAX_HIGH_SCORES_TO_RETURN)
   }
 
-  private fun score(trade: Trade, underlyingPrice: Double): RawScoredTrade? {
-    val sd = (trade.sells + trade.buys).map { calculateImpliedSd(it, underlyingPrice) }.average()
-    val sdPrices = StandardDeviationPrices(underlyingPrice, sd)
-    val plByPrice = (sdPrices.lowerSd.toInt()..sdPrices.upperSd.toInt()).associateWith {
-      trade.profitLossAtPrice(it.toDouble())
-    }
+  protected abstract fun score(trade: Trade, underlyingPrice: Double): RawScoredTrade?
 
-    // If trade is unprofitable (or barely profitable) at
-    // all price points return early
-    if (plByPrice.all { it.value < minProfitAmount }) {
-      return null
-    }
-
-    val probability = successProbability(plByPrice, underlyingPrice, sd)
-    if (probability < minProbability) {
-      return null
-    }
-    val dte = (trade.sells + trade.buys).first().dte
-    val annualReturn = annualReturnScore(dte, probability, plByPrice, sdPrices, trade)
-    if (annualReturn < minAnnualReturn) {
-      return null
-    }
-    val scoreByPricePoints = scoreByPricePoints(plByPrice, underlyingPrice, sd)
-    val scoreByNumProfitablePoints = scoreByNumProfitablePoints(plByPrice, sdPrices)
-    val maxProfitLoss = maxProfitLoss(plByPrice, sdPrices)
-    val deltas = deltas(trade)
-    val hundredTradesScore = hundredTrades(plByPrice, probability)
-    val score = Score(
-      scoreByPricePoints,
-      scoreByNumProfitablePoints,
-      probability,
-      maxProfitLoss.score,
-      annualReturn,
-      deltas.deltaScore,
-      hundredTradesScore
-    )
-
-    return RawScoredTrade(score, plByPrice, sdPrices, maxProfitLoss, deltas.tradeDelta, trade)
-  }
-
-  private fun calculateImpliedSd(option: Option, underlyingPrice: Double): Double {
+  protected fun calculateImpliedSd(option: Option, underlyingPrice: Double): Double {
     // 1SD = stock price * iv * sqrt(dte / 365)
     return underlyingPrice * option.impliedVolatility * sqrt(option.dte.toDouble() / 365.0)
   }
 
-  private fun scoreByPricePoints(
-    plByPrice: Map<Int, Double>,
-    underlyingPrice: Double,
-    standardDeviation: Double
-  ): Double {
-    return plByPrice.map { (price, pl) ->
-      val diff = abs(underlyingPrice - price)
-      val sdMultiple = if (diff < standardDeviation) {
-        2.0 + (standardDeviation / max(diff, 1.0))
-      } else {
-        1.0 + (standardDeviation / diff)
-      }
-
-      pl * sdMultiple
-    }.sum()
-  }
-
-  private fun scoreByNumProfitablePoints(
-    plByPrice: Map<Int, Double>,
-    sdPrices: StandardDeviationPrices
-  ): Double {
-    val numProfitable = plByPrice.filter { it.value > minProfitAmount }
-    val weightedByBand = numProfitable.map { (price, _) ->
-      val sdBand = sdPrices.sdBand(price.toDouble())
-      when (sdBand) {
-        0, 1 -> 4
-        2 -> 2
-        3 -> 1
-        else -> 0
-      }
-    }.sum()
-    return (weightedByBand.toDouble() / plByPrice.size) * 100
-  }
-
-  private fun successProbability(
+  protected fun successProbability(
     plByPrice: Map<Int, Double>,
     underlyingPrice: Double,
     standardDeviation: Double
@@ -161,7 +90,7 @@ object Scorer {
     return ranges.toList()
   }
 
-  private fun maxProfitLoss(
+  protected fun maxProfitLoss(
     plByPrice: Map<Int, Double>,
     sdPrices: StandardDeviationPrices
   ): MaxProfitLoss {
@@ -183,7 +112,7 @@ object Scorer {
     return MaxProfitLoss(ratio, numProfitsAtMaxProfit, max1SdProfit, numLossesAtMaxLoss, max2SdLoss, score)
   }
 
-  private fun annualReturnScore(
+  protected fun annualReturnScore(
     dte: Int,
     probability: Double,
     plByPrice: Map<Int, Double>,
@@ -218,42 +147,6 @@ object Scorer {
     val loss = numTradesPerYear * ((100 - probability) / 100) * (lossAvg.takeIf { !it.isNaN() } ?: 0.0)
     // Add because loss is negative
     return (((profit + loss) * 100) / trade.requiredMargin()) * 100
-  }
-
-  private fun hundredTrades(
-    plByPrice: Map<Int, Double>,
-    probability: Double
-  ): Int {
-    val maxProfit = plByPrice.values.max()
-    val numMaxProfit = plByPrice.values.filter { it.equivalent(maxProfit) }.size
-    val numProfitable = plByPrice.values.filter { it > minProfitAmount }.size
-    val targetProfit = if (numMaxProfit > (numProfitable / 2)) {
-      maxProfit
-    } else {
-      plByPrice.values.filter { it > minProfitAmount }.average()
-    }
-    val maxLoss = plByPrice.values.min()
-    val numMaxLoss = plByPrice.values.filter { it.equivalent(maxLoss) }.size
-    val numLosses = plByPrice.values.filter { it < 0 }.size
-    val typicalLoss = if (numMaxLoss > (numLosses / 2)) {
-      maxLoss
-    } else {
-      plByPrice.values.filter { it < minProfitAmount }.average()
-    }
-    val numLosingTrades = 100 - probability.toInt()
-    val losses = numLosingTrades * typicalLoss
-    val wins = probability.toInt() * targetProfit
-
-    return ((losses + wins) * 100).toInt()
-  }
-
-  private fun deltas(
-    trade: Trade
-  ): Deltas {
-    val sum = (trade.sells + trade.buys).sumOf { it.delta }
-    val score = trade.buys.sumOf { abs(it.delta) } - trade.sells.sumOf { abs(it.delta) }
-
-    return Deltas(sum, score)
   }
 
 }
