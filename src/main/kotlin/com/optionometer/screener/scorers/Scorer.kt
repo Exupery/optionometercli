@@ -33,7 +33,48 @@ abstract class Scorer {
     }.take(MAX_HIGH_SCORES_TO_RETURN)
   }
 
-  protected abstract fun score(trade: Trade, underlyingPrice: Double): RawScoredTrade?
+  private fun score(trade: Trade, underlyingPrice: Double): RawScoredTrade? {
+    val sd = calculateOverallImpliedSd(trade, underlyingPrice)
+    val sdPrices = StandardDeviationPrices(underlyingPrice, sd)
+    val plByPrice = calcProfitLossByPrice(trade, sdPrices)
+
+    if (plByPrice.all { it.value < minProfitAmount }) {
+      return null
+    }
+
+    val probability = successProbability(plByPrice, underlyingPrice, sd)
+    if (probability < minProbability) {
+      return null
+    }
+
+    val dte = (trade.sells + trade.buys).first().dte
+    val annualReturn = annualReturnScore(dte, probability, plByPrice, sdPrices, trade)
+    if (annualReturn < minAnnualReturn) {
+      return null
+    }
+
+    return score(
+      trade,
+      underlyingPrice,
+      sd,
+      sdPrices,
+      plByPrice,
+      probability,
+      annualReturn
+    )
+  }
+
+  protected abstract fun score(
+    trade: Trade,
+    underlyingPrice: Double,
+    sd: Double,
+    sdPrices: StandardDeviationPrices,
+    plByPrice: Map<Int, Double>,
+    probability: Double,
+    annualReturn: Double
+  ): RawScoredTrade?
+
+  protected abstract fun calculateOverallImpliedSd(trade: Trade, underlyingPrice: Double): Double
 
   protected fun calculateImpliedSd(option: Option, underlyingPrice: Double): Double {
     // 1SD = stock price * iv * sqrt(dte / 365)
@@ -147,6 +188,15 @@ abstract class Scorer {
     val loss = numTradesPerYear * ((100 - probability) / 100) * (lossAvg.takeIf { !it.isNaN() } ?: 0.0)
     // Add because loss is negative
     return (((profit + loss) * 100) / trade.requiredMargin()) * 100
+  }
+
+  protected fun calcProfitLossByPrice(
+    trade: Trade,
+    sdPrices: StandardDeviationPrices
+  ): Map<Int, Double> {
+    return (sdPrices.lowerSd.toInt()..sdPrices.upperSd.toInt()).associateWith {
+      trade.profitLossAtPrice(it.toDouble())
+    }
   }
 
 }

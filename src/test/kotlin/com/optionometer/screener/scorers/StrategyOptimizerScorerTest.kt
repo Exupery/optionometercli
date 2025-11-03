@@ -139,7 +139,7 @@ class StrategyOptimizerScorerTest {
 
   private fun callPrivateScore(trade: Trade): RawScoredTrade? {
     return Scorer::class.declaredFunctions
-      .first { it.name == "score" && it.visibility == KVisibility.PROTECTED }
+      .first { it.name == "score" && it.visibility == KVisibility.PRIVATE }
       .apply { isAccessible = true }
       .call(scorer, trade, underlyingPrice) as RawScoredTrade?
   }

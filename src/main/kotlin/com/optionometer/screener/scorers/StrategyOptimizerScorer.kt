@@ -6,28 +6,15 @@ import kotlin.math.max
 
 class StrategyOptimizerScorer : Scorer() {
 
-  override fun score(trade: Trade, underlyingPrice: Double): RawScoredTrade? {
-    val sd = (trade.sells + trade.buys).map { calculateImpliedSd(it, underlyingPrice) }.average()
-    val sdPrices = StandardDeviationPrices(underlyingPrice, sd)
-    val plByPrice = (sdPrices.lowerSd.toInt()..sdPrices.upperSd.toInt()).associateWith {
-      trade.profitLossAtPrice(it.toDouble())
-    }
-
-    // If trade is unprofitable (or barely profitable) at
-    // all price points return early
-    if (plByPrice.all { it.value < minProfitAmount }) {
-      return null
-    }
-
-    val probability = successProbability(plByPrice, underlyingPrice, sd)
-    if (probability < minProbability) {
-      return null
-    }
-    val dte = (trade.sells + trade.buys).first().dte
-    val annualReturn = annualReturnScore(dte, probability, plByPrice, sdPrices, trade)
-    if (annualReturn < minAnnualReturn) {
-      return null
-    }
+  override fun score(
+    trade: Trade,
+    underlyingPrice: Double,
+    sd: Double,
+    sdPrices: StandardDeviationPrices,
+    plByPrice: Map<Int, Double>,
+    probability: Double,
+    annualReturn: Double
+  ): RawScoredTrade? {
     val scoreByPricePoints = scoreByPricePoints(plByPrice, underlyingPrice, sd)
     val scoreByNumProfitablePoints = scoreByNumProfitablePoints(plByPrice, sdPrices)
     val maxProfitLoss = maxProfitLoss(plByPrice, sdPrices)
@@ -44,6 +31,10 @@ class StrategyOptimizerScorer : Scorer() {
     )
 
     return RawScoredTrade(score, plByPrice, sdPrices, maxProfitLoss, deltas.tradeDelta, trade)
+  }
+
+  override fun calculateOverallImpliedSd(trade: Trade, underlyingPrice: Double): Double {
+    return (trade.sells + trade.buys).map { calculateImpliedSd(it, underlyingPrice) }.average()
   }
 
   private fun scoreByPricePoints(
