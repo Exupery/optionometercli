@@ -1,10 +1,11 @@
 package com.optionometer.screener.scorers
 
+import com.optionometer.screener.Normalizer
 import com.optionometer.screener.Trade
 import kotlin.math.abs
 import kotlin.math.max
 
-class StrategyOptimizerScorer : Scorer() {
+class StrategyOptimizerScorer : Scorer<RawScoredTrade, ScoredTrade>() {
 
   override fun score(
     trade: Trade,
@@ -16,13 +17,12 @@ class StrategyOptimizerScorer : Scorer() {
     annualReturn: Double
   ): RawScoredTrade? {
     val scoreByPricePoints = scoreByPricePoints(plByPrice, underlyingPrice, sd)
-    val scoreByNumProfitablePoints = scoreByNumProfitablePoints(plByPrice, sdPrices)
     val maxProfitLoss = maxProfitLoss(plByPrice, sdPrices)
     val deltas = deltas(trade)
     val hundredTradesScore = hundredTrades(plByPrice, probability)
     val score = Score(
       scoreByPricePoints,
-      scoreByNumProfitablePoints,
+      scoreByNumProfitablePoints(plByPrice, sdPrices),
       probability,
       maxProfitLoss.score,
       annualReturn,
@@ -35,6 +35,14 @@ class StrategyOptimizerScorer : Scorer() {
 
   override fun calculateOverallImpliedSd(trade: Trade, underlyingPrice: Double): Double {
     return (trade.sells + trade.buys).map { calculateImpliedSd(it, underlyingPrice) }.average()
+  }
+
+  override fun normalize(rawScoredTrades: List<RawScoredTrade>): List<ScoredTrade> {
+    return Normalizer.normalize(rawScoredTrades).sortedByDescending {
+      it.score
+    }.filter {
+      it.score > 0
+    }.take(MAX_HIGH_SCORES_TO_RETURN)
   }
 
   private fun scoreByPricePoints(
@@ -52,23 +60,6 @@ class StrategyOptimizerScorer : Scorer() {
 
       pl * sdMultiple
     }.sum()
-  }
-
-  private fun scoreByNumProfitablePoints(
-    plByPrice: Map<Int, Double>,
-    sdPrices: StandardDeviationPrices
-  ): Double {
-    val numProfitable = plByPrice.filter { it.value > minProfitAmount }
-    val weightedByBand = numProfitable.map { (price, _) ->
-      val sdBand = sdPrices.sdBand(price.toDouble())
-      when (sdBand) {
-        0, 1 -> 4
-        2 -> 2
-        3 -> 1
-        else -> 0
-      }
-    }.sum()
-    return (weightedByBand.toDouble() / plByPrice.size) * 100
   }
 
   private fun deltas(
@@ -108,3 +99,24 @@ class StrategyOptimizerScorer : Scorer() {
   }
 
 }
+
+data class RawScoredTrade(
+  val score: Score,
+  val plByPrice: Map<Int, Double>,
+  val sdPrices: StandardDeviationPrices,
+  val maxProfitLoss: MaxProfitLoss,
+  val tradeDelta: Double,
+  val trade: Trade
+)
+
+data class ScoredTrade(
+  val score: Int,
+  val plByPrice: Map<Int, Double>,
+  val sdPrices: StandardDeviationPrices,
+  val successProbability: Double,
+  val maxProfitLoss: MaxProfitLoss,
+  val annualizedReturn: Double,
+  val tradeDelta: Double,
+  val hundredTrades: Int,
+  val trade: Trade
+)

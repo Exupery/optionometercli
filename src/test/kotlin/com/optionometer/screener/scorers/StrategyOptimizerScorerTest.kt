@@ -101,10 +101,10 @@ class StrategyOptimizerScorerTest {
   fun `scores by probability of profit`() {
     val smallProfitScore = callPrivateScore(smallProfit)
     assertNotNull(smallProfitScore)
-    assertTrue(smallProfitScore!!.score.scoreByProbability > 0)
+    assertTrue(smallProfitScore!!.score.probability > 0)
     val largeProfitScore = callPrivateScore(largeProfit)
     assertNotNull(largeProfitScore)
-    assertTrue(largeProfitScore!!.score.scoreByProbability > smallProfitScore.score.scoreByProbability)
+    assertTrue(largeProfitScore!!.score.probability > smallProfitScore.score.probability)
   }
 
   @Test

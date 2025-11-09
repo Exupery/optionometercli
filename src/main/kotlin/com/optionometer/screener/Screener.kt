@@ -3,6 +3,8 @@ package com.optionometer.screener
 import com.optionometer.models.OptionChain
 import com.optionometer.output.CsvWriter
 import com.optionometer.quotes.Importer
+import com.optionometer.screener.scorers.BullPutScorer
+import com.optionometer.screener.scorers.ScoredBullPut
 import com.optionometer.screener.scorers.ScoredTrade
 import com.optionometer.screener.scorers.StrategyOptimizerScorer
 import org.slf4j.LoggerFactory
@@ -34,17 +36,25 @@ class Screener(
       return
     }
 
-    when (screenerMode) {
-      Mode.STRATEGY_OPTIMIZER -> ""
-      Mode.BULL_PUT_SPREAD_SCREENER -> ""
+    val scoredTrades = when (screenerMode) {
+      Mode.STRATEGY_OPTIMIZER -> {
+        val scored = scoreTrades(optionChains)
+        csvWriter.write(ticker, scored)
+        scored
+      }
+
+      Mode.BULL_PUT_SPREAD_SCREENER -> {
+        val scored = scoreBullPuts(optionChains)
+        csvWriter.write(ticker, scored)
+        scored
+      }
     }
 
-    val scoredTrades = scoreTrades(optionChains)
     if (scoredTrades.isEmpty() || scoredTrades.all { it.isEmpty() }) {
       logger.warn("No trades found with a positive score for selected criteria")
       return
     }
-    csvWriter.write(ticker, scoredTrades)
+
     logger.info("Highest score trade for each expiry:")
     scoredTrades.forEach {
       logger.info(it.firstOrNull().toString())
@@ -52,12 +62,11 @@ class Screener(
   }
 
   private fun scoreTrades(optionChains: List<OptionChain>): List<List<ScoredTrade>> {
+    val scorer = StrategyOptimizerScorer()
+    val tradeTypes = numLegs.split(",")
     return optionChains.map {
       TradeBuilder(it)
     }.map { tb ->
-      val scorer = StrategyOptimizerScorer()
-      val tradeTypes = numLegs.split(",")
-
       // Multileg trades
       val scored = tradeTypes.associateWith { type ->
         when (type) {
@@ -90,6 +99,26 @@ class Screener(
       }.filter { it.isNotEmpty() }.flatten()
 
       (scored.values.flatten() + enhanced + named).sortedByDescending { it.score }
+    }
+  }
+
+  private fun scoreBullPuts(optionChains: List<OptionChain>): List<List<ScoredBullPut>> {
+    val scorer = BullPutScorer()
+    val minShortStrikePercentBelowCurrent: Int = System.getProperty("MIN_BULL_PUT_STRIKE_BELOW")?.toInt() ?: 2
+    return optionChains.map {
+      TradeBuilder(it)
+    }.map { tb ->
+      val potentialBullPutSpreads = tb.bullPutSpreads().filter { trade ->
+        val shortStrike = trade.sells.first().strike
+        if (shortStrike > tb.underlyingPrice) {
+          false
+        } else {
+          val diff = tb.underlyingPrice - shortStrike
+          val diffPercent = (diff / tb.underlyingPrice) * 100
+          diffPercent >= minShortStrikePercentBelowCurrent
+        }
+      }
+      scorer.score(potentialBullPutSpreads, tb.underlyingPrice).sortedByDescending { it.score }
     }
   }
 

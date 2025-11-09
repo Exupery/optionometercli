@@ -1,6 +1,8 @@
 package com.optionometer.screener
 
+import com.optionometer.screener.scorers.RawScoredBullPut
 import com.optionometer.screener.scorers.RawScoredTrade
+import com.optionometer.screener.scorers.ScoredBullPut
 import com.optionometer.screener.scorers.ScoredTrade
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -16,7 +18,7 @@ object Normalizer {
     val cohort = rawScoredTrades.associateBy { generateTradeUuid(it.trade) }
     val pricePointScores = normalize(cohort.map { (id, rst) -> id to rst.score.pricePointScore })
     val numProfitPointScores = normalize(cohort.map { (id, rst) -> id to rst.score.numProfitablePointsScore })
-    val probabilityScores = normalize(cohort.map { (id, rst) -> id to rst.score.scoreByProbability })
+    val probabilityScores = normalize(cohort.map { (id, rst) -> id to rst.score.probability })
     val maxProfitLossScores = normalize(cohort.map { (id, rst) -> id to rst.score.maxLossRatio })
     val annualReturnScores = normalize(cohort.map { (id, rst) -> id to rst.score.annualizedReturn })
     val deltaScores = normalize(cohort.map { (id, rst) -> id to rst.score.deltaScore })
@@ -34,6 +36,25 @@ object Normalizer {
         annualReturnScores.getOrDefault(id, 0.0),
         deltaScores.getOrDefault(id, 0.0),
         hundredTradesScores.getOrDefault(id, 0.0)
+      )
+      scoredTradeFromRawScoredTrade(score.toInt(), rst)
+    }
+  }
+
+  fun normalizeBullPuts(rawScoredTrades: List<RawScoredBullPut>): List<ScoredBullPut> {
+    logger.info("Normalizing ${"%,d".format(rawScoredTrades.size)} bull put spreads")
+    val cohort = rawScoredTrades.associateBy { generateTradeUuid(it.trade) }
+    val numProfitPointScores = normalize(cohort.map { (id, rst) -> id to rst.score.numProfitablePointsScore })
+    val probabilityScores = normalize(cohort.map { (id, rst) -> id to rst.score.probability })
+    val maxProfitLossScores = normalize(cohort.map { (id, rst) -> id to rst.score.maxLossRatio })
+    val annualReturnScores = normalize(cohort.map { (id, rst) -> id to rst.score.annualizedReturn })
+
+    return cohort.map { (id, rst) ->
+      val score = weigher.scoreByWeight(
+        numProfitPointScores.getOrDefault(id, 0.0),
+        probabilityScores.getOrDefault(id, 0.0),
+        maxProfitLossScores.getOrDefault(id, 0.0),
+        annualReturnScores.getOrDefault(id, 0.0)
       )
       scoredTradeFromRawScoredTrade(score.toInt(), rst)
     }
@@ -62,11 +83,22 @@ object Normalizer {
       score,
       raw.plByPrice,
       raw.sdPrices,
-      raw.score.scoreByProbability,
+      raw.score.probability,
       raw.maxProfitLoss,
       raw.score.annualizedReturn,
       raw.tradeDelta,
       raw.score.hundredTradesScore,
+      raw.trade
+    )
+  }
+
+  private fun scoredTradeFromRawScoredTrade(score: Int, raw: RawScoredBullPut): ScoredBullPut {
+    return ScoredBullPut(
+      score,
+      raw.score.probability,
+      raw.maxProfitLoss,
+      raw.score.annualizedReturn,
+      raw.numContracts,
       raw.trade
     )
   }

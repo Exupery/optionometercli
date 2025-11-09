@@ -28,4 +28,16 @@ class Weigher {
         (hundredTradesScore * hundredTradeWeight)
   }
 
+  fun scoreByWeight(
+    numProfitPointScore: Double,
+    probabilityScore: Double,
+    maxProfitLossScore: Double,
+    annualReturnScore: Double
+  ): Double {
+    return (numProfitPointScore * numProfitPointWeight) +
+        (probabilityScore * probabilityWeight) +
+        (maxProfitLossScore * maxProfitLossWeight) +
+        (annualReturnScore * annualReturnWeight)
+  }
+
 }

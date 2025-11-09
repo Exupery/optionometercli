@@ -1,7 +1,6 @@
 package com.optionometer.screener.scorers
 
 import com.optionometer.models.Option
-import com.optionometer.screener.Normalizer.normalize
 import com.optionometer.screener.Trade
 import org.apache.commons.statistics.distribution.NormalDistribution
 import org.slf4j.LoggerFactory
@@ -9,10 +8,10 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.sqrt
 
-private const val MAX_HIGH_SCORES_TO_RETURN = 100
+const val MAX_HIGH_SCORES_TO_RETURN = 100
 private const val NUM_STANDARD_DEVIATIONS = 2
 
-abstract class Scorer {
+abstract class Scorer<R, S> {
 
   private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -20,20 +19,16 @@ abstract class Scorer {
   protected val minProbability: Int = System.getProperty("MIN_PROBABILITY")?.toInt() ?: 25
   protected val minProfitAmount: Double = System.getProperty("MIN_PROFIT_AMOUNT")?.toDouble() ?: 0.5
 
-  fun score(trades: List<Trade>, underlyingPrice: Double): List<ScoredTrade> {
+  fun score(trades: List<Trade>, underlyingPrice: Double): List<S> {
     logger.info("Scoring ${"%,d".format(trades.size)} trades")
     val rawScored = trades.mapNotNull {
       score(it, underlyingPrice)
     }
 
-    return normalize(rawScored).sortedByDescending {
-      it.score
-    }.filter {
-      it.score > 0
-    }.take(MAX_HIGH_SCORES_TO_RETURN)
+    return normalize(rawScored)
   }
 
-  private fun score(trade: Trade, underlyingPrice: Double): RawScoredTrade? {
+  private fun score(trade: Trade, underlyingPrice: Double): R? {
     val sd = calculateOverallImpliedSd(trade, underlyingPrice)
     val sdPrices = StandardDeviationPrices(underlyingPrice, sd)
     val plByPrice = calcProfitLossByPrice(trade, sdPrices)
@@ -72,9 +67,11 @@ abstract class Scorer {
     plByPrice: Map<Int, Double>,
     probability: Double,
     annualReturn: Double
-  ): RawScoredTrade?
+  ): R?
 
   protected abstract fun calculateOverallImpliedSd(trade: Trade, underlyingPrice: Double): Double
+
+  protected abstract fun normalize(rawScoredTrades: List<R>): List<S>
 
   protected fun calculateImpliedSd(option: Option, underlyingPrice: Double): Double {
     // 1SD = stock price * iv * sqrt(dte / 365)
@@ -190,6 +187,23 @@ abstract class Scorer {
     return (((profit + loss) * 100) / trade.requiredMargin()) * 100
   }
 
+  protected fun scoreByNumProfitablePoints(
+    plByPrice: Map<Int, Double>,
+    sdPrices: StandardDeviationPrices
+  ): Double {
+    val numProfitable = plByPrice.filter { it.value > minProfitAmount }
+    val weightedByBand = numProfitable.map { (price, _) ->
+      val sdBand = sdPrices.sdBand(price.toDouble())
+      when (sdBand) {
+        0, 1 -> 4
+        2 -> 2
+        3 -> 1
+        else -> 0
+      }
+    }.sum()
+    return (weightedByBand.toDouble() / plByPrice.size) * 100
+  }
+
   protected fun calcProfitLossByPrice(
     trade: Trade,
     sdPrices: StandardDeviationPrices
@@ -204,32 +218,11 @@ abstract class Scorer {
 data class Score(
   val pricePointScore: Double,
   val numProfitablePointsScore: Double,
-  val scoreByProbability: Double,
+  val probability: Double,
   val maxLossRatio: Double,
   val annualizedReturn: Double,
   val deltaScore: Double,
   val hundredTradesScore: Int
-)
-
-data class RawScoredTrade(
-  val score: Score,
-  val plByPrice: Map<Int, Double>,
-  val sdPrices: StandardDeviationPrices,
-  val maxProfitLoss: MaxProfitLoss,
-  val tradeDelta: Double,
-  val trade: Trade
-)
-
-data class ScoredTrade(
-  val score: Int,
-  val plByPrice: Map<Int, Double>,
-  val sdPrices: StandardDeviationPrices,
-  val successProbability: Double,
-  val maxProfitLoss: MaxProfitLoss,
-  val annualizedReturn: Double,
-  val tradeDelta: Double,
-  val hundredTrades: Int,
-  val trade: Trade
 )
 
 data class MaxProfitLoss(
