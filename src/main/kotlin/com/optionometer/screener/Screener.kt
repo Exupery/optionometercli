@@ -43,8 +43,8 @@ class Screener(
         scored
       }
 
-      Mode.BULL_PUT_SPREAD_SCREENER -> {
-        val scored = scoreBullPuts(optionChains)
+      Mode.BULL_PUT_SPREAD_SCREENER, Mode.BULL_PUT_SPREAD_OPTIMIZER -> {
+        val scored = scoreBullPuts(optionChains, screenerMode)
         csvWriter.write(ticker, scored)
         scored
       }
@@ -102,23 +102,40 @@ class Screener(
     }
   }
 
-  private fun scoreBullPuts(optionChains: List<OptionChain>): List<List<ScoredBullPut>> {
+  private fun scoreBullPuts(
+    optionChains: List<OptionChain>,
+    mode: Mode
+  ): List<List<ScoredBullPut>> {
+    if (optionChains.isEmpty()) {
+      return emptyList()
+    }
     val scorer = BullPutScorer()
     val minShortStrikePercentBelowCurrent: Int = System.getProperty("MIN_BULL_PUT_STRIKE_BELOW")?.toInt() ?: 2
+    val underlyingPrice = optionChains.first().underlyingPrice
+    val optimizerDefaultTarget =
+      (underlyingPrice - (underlyingPrice * (minShortStrikePercentBelowCurrent / 100.0))).toInt()
+    val targetSellStrike: Int = System.getProperty("TARGET_SELL_STRIKE")?.toInt() ?: optimizerDefaultTarget
+    logger.info("BULL_PUT_SPREAD_SCREENER: $minShortStrikePercentBelowCurrent")
+    logger.info("BULL_PUT_SPREAD_OPTIMIZER: $targetSellStrike")
     return optionChains.map {
       TradeBuilder(it)
     }.map { tb ->
       val potentialBullPutSpreads = tb.bullPutSpreads().filter { trade ->
         val shortStrike = trade.sells.first().strike
-        if (shortStrike > tb.underlyingPrice) {
+        if (shortStrike > underlyingPrice) {
           false
-        } else {
-          val diff = tb.underlyingPrice - shortStrike
-          val diffPercent = (diff / tb.underlyingPrice) * 100
+        } else if (mode == Mode.BULL_PUT_SPREAD_SCREENER) {
+          underlyingPrice
+          val diff = underlyingPrice - shortStrike
+          val diffPercent = (diff / underlyingPrice) * 100
           diffPercent >= minShortStrikePercentBelowCurrent
+        } else if (mode == Mode.BULL_PUT_SPREAD_OPTIMIZER) {
+          shortStrike.toInt() == targetSellStrike
+        } else {
+          false
         }
       }
-      scorer.score(potentialBullPutSpreads, tb.underlyingPrice).sortedByDescending { it.score }
+      scorer.score(potentialBullPutSpreads, underlyingPrice).sortedByDescending { it.score }
     }
   }
 
@@ -126,5 +143,6 @@ class Screener(
 
 enum class Mode {
   STRATEGY_OPTIMIZER,
-  BULL_PUT_SPREAD_SCREENER
+  BULL_PUT_SPREAD_SCREENER,
+  BULL_PUT_SPREAD_OPTIMIZER
 }
